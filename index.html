@@ -36,112 +36,15 @@
 
         <div class="app-main">
             <!-- Sidebar -->
-            <aside class="sidebar">
-                <div class="sidebar-header">
-                    <h2>Medical Subjects</h2>
-                    <div class="search-container">
-                        <input type="text" id="search-input" placeholder="Search topics..." class="search-input">
-                        <i class="fas fa-search search-icon"></i>
-                    </div>
-                    <div class="filter-controls">
-                        <select id="filter-select" class="form-control">
-                            <option value="all">All Topics</option>
-                            <option value="completed">Completed</option>
-                            <option value="incomplete">Incomplete</option>
-                        </select>
-                    </div>
-                </div>
-                <nav class="subjects-nav" id="subjects-nav">
-                    <!-- Subject buttons will be dynamically generated -->
-                </nav>
+            <aside class="sidebar" id="sidebar">
+                <!-- Subjects and filters will go here -->
             </aside>
-
-            <!-- Main Content -->
-            <main class="main-content">
-                <div class="content-header">
-                    <h2 id="current-subject">Select a Subject</h2>
-                    <div class="subject-actions">
-                        <button class="btn btn--outline btn--sm" id="reset-subject-btn">
-                            <i class="fas fa-undo"></i>
-                            Reset Progress
-                        </button>
-                        <button class="btn btn--secondary btn--sm" id="export-progress-btn">
-                            <i class="fas fa-download"></i>
-                            Export Progress
-                        </button>
-                    </div>
-                </div>
-
-                <div class="subject-progress" id="subject-progress">
-                    <div class="progress-info">
-                        <span class="progress-text">
-                            Subject Progress: <strong id="subject-completed">0</strong>/<strong id="subject-total">0</strong> topics
-                        </span>
-                        <span class="progress-percentage" id="subject-percentage">0%</span>
-                    </div>
-                    <div class="progress-bar-container">
-                        <div class="progress-bar" id="subject-progress-bar"></div>
-                    </div>
-                </div>
-
-                <div class="topics-container" id="topics-container">
-                    <div class="welcome-message">
-                        <i class="fas fa-stethoscope"></i>
-                        <h3>Welcome to Medical Study Tracker</h3>
-                        <p>Select a subject from the sidebar to start tracking your study progress across FMGE, NEET-PG, and INI CET topics.</p>
-                    </div>
-                </div>
-
-                <!-- Search Results -->
-                <div class="search-results" id="search-results" style="display: none;">
-                    <h3>Search Results</h3>
-                    <div id="search-results-content"></div>
-                </div>
+            <!-- Main content area -->
+            <main class="main-content" id="main-content">
+                <!-- Topics will go here -->
             </main>
         </div>
-
-        <!-- Export Modal -->
-        <div class="modal hidden" id="export-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Export Progress Summary</h3>
-                    <button class="modal-close" id="close-export-modal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div id="export-content"></div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn--secondary" id="close-export-modal-btn">Close</button>
-                    <button class="btn btn--primary" id="copy-export-btn">
-                        <i class="fas fa-copy"></i>
-                        Copy to Clipboard
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Confirmation Modal -->
-        <div class="modal hidden" id="confirm-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Confirm Reset</h3>
-                    <button class="modal-close" id="close-confirm-modal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to reset all progress for this subject? This action cannot be undone.</p>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn--outline" id="cancel-reset-btn">Cancel</button>
-                    <button class="btn btn--primary" id="confirm-reset-btn">Reset Progress</button>
-                </div>
-            </div>
-        </div>
     </div>
-
     <script src="app.js"></script>
 </body>
 </html>
