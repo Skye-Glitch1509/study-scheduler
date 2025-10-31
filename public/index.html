@@ -110,9 +110,10 @@
   <button type="button" id="rebalance-btn" style="display:none;">Rebalance Schedule</button>
   <div id="schedule"></div>
 <script>
-var CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbxbVUfw3-HGPfV53flf-IXBWtzcuDKmzVy_14GtAtBtsmj9xvie2nHbM936cjLJ9nAFtA/exec";
+var CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbyw3nDaDxpHi14sT7IwRwxUxQ6S2SDt9N7zXftwdt7l51Pfe6yiRg-YrpnjuLaS_12J2w/exec";
 var USER_ID = "default";
 
+// All JS logic (unchanged otherwise)
 function cloudSave(planConfig, progress, notes, manualOrder) {
   var payload = {
     id: planConfig.planId,
@@ -484,7 +485,7 @@ function renderSchedule(planConfig, progress, rebalance = false) {
       let saveData=loadProgress();let saveNotes=loadNotes();let manualOrder=loadManualOrder();
       saveNotes[planConfig.planId]=saveNotes[planConfig.planId]||{};
       saveNotes[planConfig.planId][this.dataset.taskNote]=this.value;
-      saveProgress(saveData,saveNotes,manualOrder);
+      saveProgress(saveData,saveNotes(),manualOrder);
     });
   });
 }
