@@ -8,7 +8,7 @@
     ul { list-style-type: none; padding-left: 0; }
     li { margin-bottom: 7px; }
     .progress-checkbox { margin-right: 8px; cursor:pointer;}
-    #add-resource-btn, #rebalance-btn, #download-csv-btn, #download-ics-btn, #cloud-save-btn, #cloud-load-btn { margin-top: 8px; margin-bottom: 10px; }
+    #add-resource-btn, #rebalance-btn, #download-csv-btn, #download-ics-btn, #cloud-save-btn, #cloud-load-btn, #create-new-btn { margin-top: 8px; margin-bottom: 10px; }
     #progress-bar-container {
       width: 100%; max-width: 500px; height: 24px;
       background: #eee; border-radius: 12px; overflow: hidden; margin-bottom:20px; margin-top: 24px;
@@ -51,8 +51,10 @@
   </style>
 </head>
 <body>
+  <button type="button" id="cloud-load-btn" style="display:inline;">Load plan from cloud</button>
+  <button type="button" id="create-new-btn" style="display:none;">Create new schedule instead</button>
   <h1>Study Scheduler</h1>
-  <form id="study-form">
+  <form id="study-form" style="display:block;">
     <div id="resource-list">
       <div class="resource-row">
         <label>Book/Resource Name: <input type="text" class="resource" required></label>
@@ -97,7 +99,6 @@
     <button type="submit">Create Schedule</button>
   </form>
   <button type="button" id="cloud-save-btn" style="display:none;">Save plan to cloud</button>
-  <button type="button" id="cloud-load-btn" style="display:none;">Load plan from cloud</button>
   <button type="button" id="download-csv-btn" style="display:none;">Download CSV</button>
   <button type="button" id="download-ics-btn" style="display:none;">Download Calendar (.ics)</button>
   <div id="progress-bar-container" style="display:none;">
@@ -110,6 +111,7 @@
     var CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbxbVUfw3-HGPfV53flf-IXBWtzcuDKmzVy_14GtAtBtsmj9xvie2nHbM936cjLJ9nAFtA/exec";
     var USER_ID = "default";
 
+    // ---- Cloud sync logic ----
     function cloudSave(planConfig, progress, notes, manualOrder) {
       var payload = {
         id: planConfig.planId,
@@ -127,7 +129,6 @@
         alert("Cloud save failed!");
       });
     }
-
     function cloudLoad(planId, callback) {
       fetch(CLOUD_API_URL + "?action=load&planid=" + encodeURIComponent(planId))
         .then(res => res.text())
@@ -139,7 +140,7 @@
           alert("Cloud load failed!");
         });
     }
-    // --- Utility functions for saving/loading progress/notes/order ---
+
     function saveProgress(progress, notes, manualOrder) {
       localStorage.setItem('studyProgress', JSON.stringify(progress));
       localStorage.setItem('studyNotes', JSON.stringify(notes));
@@ -180,7 +181,6 @@
         e.target.closest('.holiday-input-row').remove();
       })
     );
-
     function countDaysDone(progress, planId, resource, daysIdxArr) {
       return Object.keys(progress)
         .filter(k => {
@@ -188,7 +188,6 @@
             (!daysIdxArr || daysIdxArr.includes(parseInt(k.split('_').pop())));
         }).length;
     }
-
     function updateProgressBar() {
       if (lastBoxCount.total === 0) {
         document.getElementById('progress-bar-container').style.display = "none";
@@ -200,7 +199,6 @@
       document.getElementById('progress-bar-container').style.display = "block";
       document.getElementById('progress-label').innerText = `Progress: ${lastBoxCount.done} / ${lastBoxCount.total} (${percent}%)`;
     }
-
     function getSelectedWeekdays() { return Array.from(document.querySelectorAll('.weekday')).filter(cb => cb.checked).map(cb => parseInt(cb.value)); }
     function getSkipDates() { return Array.from(document.querySelectorAll('.holiday-date')).map(input => input.value).filter(val => val); }
     function getScheduleDays(startDate, endDate, weekDays, skipDates) {
@@ -321,19 +319,31 @@
       document.body.appendChild(link);link.click();
       setTimeout(()=>{document.body.removeChild(link);window.URL.revokeObjectURL(url);},100);
     }
-    // --- Cloud sync event handlers ---
-    document.getElementById('cloud-save-btn').addEventListener('click', function() {
-      cloudSave(lastPlanConfig, lastProgressCache, lastNotesCache, lastOrderCache);
-    });
+
+    // Main event handlers and "load from cloud" logic
     document.getElementById('cloud-load-btn').addEventListener('click', function() {
-      cloudLoad(lastPlanConfig.planId, (result)=>{
-        if(result.planConfig){
-          renderSchedule(result.planConfig, result.progress || {}, false);
-          alert("Loaded from cloud!");
+      let lastId = localStorage.getItem("lastPlanId");
+      if (!lastId) {
+        alert("No plan ID found. Please create and save a schedule first!");
+        return;
+      }
+      cloudLoad(lastId, function(result) {
+        if (result.planConfig) {
+          showLoadedSchedule(result);
         } else {
-          alert("No cloud plan found for this period!");
+          alert("No cloud plan found for this ID!");
         }
       });
+    });
+
+    document.getElementById('create-new-btn').addEventListener('click', function() {
+      document.getElementById('schedule').innerHTML = '';
+      document.getElementById('study-form').style.display = 'block';
+      document.getElementById('create-new-btn').style.display = 'none';
+    });
+
+    document.getElementById('cloud-save-btn').addEventListener('click', function() {
+      cloudSave(lastPlanConfig, lastProgressCache, lastNotesCache, lastOrderCache);
     });
     document.getElementById('download-csv-btn').addEventListener('click',function(){
       downloadCSV(lastPlanConfig,lastProgressCache,lastNotesCache,lastOrderCache);
@@ -361,8 +371,16 @@
       lastPlanConfig={resourceNames,pageCounts,intervals,startDate,endDate,planId,scheduleDays};
       lastScheduleDays=scheduleDays;
       const progress=loadProgress()[planId]||{};
+      localStorage.setItem("lastPlanId", planId);
       renderSchedule(lastPlanConfig,progress,false);
     });
+
+    function showLoadedSchedule(planData) {
+      document.getElementById('study-form').style.display = 'none';
+      document.getElementById('schedule').innerHTML = '';
+      renderSchedule(planData.planConfig, planData.progress || {}, false);
+      document.getElementById('create-new-btn').style.display = 'inline';
+    }
 
     function renderSchedule(planConfig, progress, rebalance = false) {
       const { resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays } = planConfig;
@@ -422,7 +440,6 @@
       document.getElementById('download-csv-btn').style.display='inline';
       document.getElementById('download-ics-btn').style.display='inline';
       document.getElementById('cloud-save-btn').style.display='inline';
-      document.getElementById('cloud-load-btn').style.display='inline';
       lastBoxCount={total:totalBoxCount,done:doneBoxCount};
       updateProgressBar();
       lastProgressCache=progress;
