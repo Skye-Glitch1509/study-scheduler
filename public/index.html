@@ -9,6 +9,7 @@
     li { margin-bottom: 7px; }
     .progress-checkbox { margin-right: 8px; cursor:pointer;}
     #add-resource-btn, #rebalance-btn, #download-csv-btn, #download-ics-btn, #cloud-save-btn, #cloud-load-btn, #create-new-btn { margin-top: 8px; margin-bottom: 10px; }
+    #plan-id-display {margin-top: 10px; font-size: 15px; color: #444; background: #f6f6f6; border-radius: 8px; padding: 10px;}
     #progress-bar-container {
       width: 100%; max-width: 500px; height: 24px;
       background: #eee; border-radius: 12px; overflow: hidden; margin-bottom:20px; margin-top: 24px;
@@ -54,6 +55,7 @@
   <button type="button" id="cloud-load-btn" style="display:inline;">Load plan from cloud</button>
   <button type="button" id="create-new-btn" style="display:none;">Create new schedule instead</button>
   <h1>Study Scheduler</h1>
+  <div id="plan-id-display" style="display:none"></div>
   <form id="study-form" style="display:block;">
     <div id="resource-list">
       <div class="resource-row">
@@ -111,7 +113,6 @@
     var CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbxbVUfw3-HGPfV53flf-IXBWtzcuDKmzVy_14GtAtBtsmj9xvie2nHbM936cjLJ9nAFtA/exec";
     var USER_ID = "default";
 
-    // ---- Cloud sync logic ----
     function cloudSave(planConfig, progress, notes, manualOrder) {
       var payload = {
         id: planConfig.planId,
@@ -140,7 +141,6 @@
           alert("Cloud load failed!");
         });
     }
-
     function saveProgress(progress, notes, manualOrder) {
       localStorage.setItem('studyProgress', JSON.stringify(progress));
       localStorage.setItem('studyNotes', JSON.stringify(notes));
@@ -149,7 +149,6 @@
     function loadProgress() { return JSON.parse(localStorage.getItem('studyProgress') || '{}'); }
     function loadNotes() { return JSON.parse(localStorage.getItem('studyNotes') || '{}'); }
     function loadManualOrder() { return JSON.parse(localStorage.getItem('studyManualOrder') || '{}'); }
-
     let lastPlanConfig = null, lastBoxCount = { total: 0, done: 0 }, lastScheduleDays = [], lastProgressCache = {}, lastNotesCache = {}, lastOrderCache = {};
 
     document.getElementById('add-resource-btn').addEventListener('click', function() {
@@ -208,7 +207,6 @@
         dt.setDate(dt.getDate() + 1); }
       return days;
     }
-
     // --- Calendar download ---
     function pad(n){return n<10?"0"+n:n;}
     function datetoCal(dt) {
@@ -320,16 +318,19 @@
       setTimeout(()=>{document.body.removeChild(link);window.URL.revokeObjectURL(url);},100);
     }
 
-    // Main event handlers and "load from cloud" logic
+    // Main event handler for loading plan by prompt or storage
     document.getElementById('cloud-load-btn').addEventListener('click', function() {
-      let lastId = localStorage.getItem("lastPlanId");
-      if (!lastId) {
-        alert("No plan ID found. Please create and save a schedule first!");
-        return;
+      let planId = localStorage.getItem("lastPlanId");
+      if (!planId) {
+        planId = prompt("Enter plan ID to load from cloud:");
+        if (!planId) return;
       }
-      cloudLoad(lastId, function(result) {
+      cloudLoad(planId, function(result) {
         if (result.planConfig) {
           showLoadedSchedule(result);
+          localStorage.setItem("lastPlanId", planId);
+          document.getElementById('plan-id-display').innerText = 'Current Plan ID: ' + planId;
+          document.getElementById('plan-id-display').style.display = 'block';
         } else {
           alert("No cloud plan found for this ID!");
         }
@@ -340,6 +341,7 @@
       document.getElementById('schedule').innerHTML = '';
       document.getElementById('study-form').style.display = 'block';
       document.getElementById('create-new-btn').style.display = 'none';
+      document.getElementById('plan-id-display').style.display = 'none';
     });
 
     document.getElementById('cloud-save-btn').addEventListener('click', function() {
@@ -372,6 +374,8 @@
       lastScheduleDays=scheduleDays;
       const progress=loadProgress()[planId]||{};
       localStorage.setItem("lastPlanId", planId);
+      document.getElementById('plan-id-display').innerText = 'Current Plan ID: ' + planId;
+      document.getElementById('plan-id-display').style.display = 'block';
       renderSchedule(lastPlanConfig,progress,false);
     });
 
