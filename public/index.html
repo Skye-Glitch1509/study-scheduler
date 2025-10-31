@@ -324,7 +324,7 @@ document.getElementById('cloud-load-btn').addEventListener('click', function() {
   let planId = prompt("Enter plan ID to load from cloud:", defaultId);
   if (!planId) return;
   cloudLoad(planId, function(result) {
-    if (result.planConfig) {
+    if (result && result.planConfig) {
       showLoadedSchedule(result);
       localStorage.setItem("lastPlanId", planId);
       document.getElementById('plan-id-display').innerText = 'Current Plan ID: ' + planId;
@@ -377,10 +377,10 @@ document.getElementById('study-form').addEventListener('submit',function(event){
   renderSchedule(lastPlanConfig,progress,false);
 });
 
-function showLoadedSchedule(planData) {
+function showLoadedSchedule(result) {
   document.getElementById('study-form').style.display = 'none';
   document.getElementById('schedule').innerHTML = '';
-  renderSchedule(planData.planConfig, planData.progress || {}, false);
+  renderSchedule(result.planConfig, result.progress || {}, false);
   document.getElementById('create-new-btn').style.display = 'inline';
 }
 
