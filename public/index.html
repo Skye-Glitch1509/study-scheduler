@@ -109,6 +109,35 @@
 <script>
 var CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbxbVUfw3-HGPfV53flf-IXBWtzcuDKmzVy_14GtAtBtsmj9xvie2nHbM936cjLJ9nAFtA/exec";
 var USER_ID = "default";
+function cloudSave(planConfig, progress, notes, manualOrder) {
+  var payload = {
+    id: planConfig.planId,
+    user: USER_ID,
+    savedPlan: JSON.stringify({
+      planConfig, progress, notes, manualOrder
+    })
+  };
+  fetch(CLOUD_API_URL, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  }).then(res => res.json()).then(data => {
+    alert("Saved to cloud!");
+  }).catch(err => {
+    alert("Cloud save failed!");
+  });
+}
+
+function cloudLoad(planId, callback) {
+  fetch(CLOUD_API_URL + "?action=load&planid=" + encodeURIComponent(planId))
+    .then(res => res.text())
+    .then(text => {
+      let data;
+      try {data = JSON.parse(text);} catch(e){data={};}
+      callback(data);
+    }).catch(err=>{
+      alert("Cloud load failed!");
+    });
+}
 // --- Utility functions for saving/loading progress/notes/order ---
 function saveProgress(progress, notes, manualOrder) {
   localStorage.setItem('studyProgress', JSON.stringify(progress));
