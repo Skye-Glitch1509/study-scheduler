@@ -148,7 +148,6 @@
   <div class="schedule-list" id="schedule-list"></div>
 </div>
 <script>
-// Resource autofill library
 const resourceLibrary = {
   "Marrow Video - Anatomy": { type: "video", total: 84 },
   "Marrow Video - Physiology": { type: "video", total: null },
@@ -194,7 +193,6 @@ const resourceLibrary = {
   "DocTutorials QBank": { type: "qbank", total: 13228 },
   "Robbins Pathology": { type: "book", total: 1024 }
 };
-// Autofill logic
 function setupResourceAutofill(row) {
   const searchBox = row.querySelector('.resource-search');
   const typeSel = row.querySelector('.resource-type-dropdown');
@@ -204,6 +202,7 @@ function setupResourceAutofill(row) {
     if (resourceLibrary.hasOwnProperty(val)) {
       const meta = resourceLibrary[val];
       typeSel.value = meta.type;
+      typeSel.disabled = true;
       if (meta.total) {
         totalBox.value = meta.total;
         totalBox.readOnly = true;
@@ -214,7 +213,9 @@ function setupResourceAutofill(row) {
         totalBox.style.background = "#fff";
       }
     } else {
+      // For custom, unlock both Type and Total fields.
       typeSel.value = "other";
+      typeSel.disabled = false;
       totalBox.value = '';
       totalBox.readOnly = false;
       totalBox.style.background = "#fff";
@@ -225,10 +226,10 @@ function setupResourceAutofill(row) {
     totalBox.style.background = "#fff";
   });
   typeSel.onchange = function () {
-    if (typeSel.value !== (resourceLibrary[searchBox.value] || {}).type) {
-      totalBox.readOnly = false;
-      totalBox.style.background = "#fff";
-    }
+    // Always allow changing type for custom resources
+    typeSel.disabled = false;
+    totalBox.readOnly = false;
+    totalBox.style.background = "#fff";
   };
 }
 function addResourceRow(resourceVal = "", typeVal = "video", totalVal = "", rateVal = "10") {
