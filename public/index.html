@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>Study Scheduler</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css?family=Inter:400,500,600,700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -10,15 +11,22 @@
       --primary-btn: #2562cf; --primary-btn-hover: #1e4fab; --shadow: 0 2px 14px #23262f10;
       --dark-bg: #21263b; --dark-card: #272a38; --dark-main: #c0cefa; --dark-accent: #23262f;
       --dark-text: #e0e7fa; --dark-border: #323648;
+      --high: #fa3939; --med: #fabf3a; --low: #7ed957;
+      --dark-high:#ff7070; --dark-med: #ffe159; --dark-low: #a3ddb8;
     }
+    html { box-sizing: border-box; }
+    *, *:before, *:after { box-sizing: inherit; }
+
     body {
       font-family: 'Inter', Arial, sans-serif; background: var(--bg); color: var(--text);
       min-height: 100vh; transition: background .2s, color .2s;
+      margin: 0;
+      padding: 0;
     }
     body.dark {background: var(--dark-bg); color: var(--dark-text);}
     h1 { font-size: 2.1em; color: var(--main); font-weight:700; letter-spacing:-0.7px; margin-bottom:8px;}
-    .app-header { display: flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-    #darkmode-btn { border:none; background: var(--accent); color: var(--main); width:34px; height:34px; font-size:23px;
+    .app-header { display: flex; align-items:center; justify-content:space-between; margin-bottom:8px; margin-top:8px;}
+    #darkmode-btn { border:none; background: var(--accent); color: var(--main); width:38px; height:38px; font-size:23px;
       border-radius:50%; cursor:pointer; transition:.17s; margin-left:13px; margin-bottom:2px; }
     body.dark #darkmode-btn { background:var(--dark-accent); color:var(--dark-main);}
     .card {background: var(--card); box-shadow: var(--shadow); border-radius:16px; border: 1px solid var(--border);
@@ -32,7 +40,7 @@
     .card-row .remove-btn:hover {text-decoration:underline;}
     button, input[type="button"] {
       font-family: 'Inter', Arial, sans-serif; background: var(--primary-btn); color: #fff; border:none; border-radius:8px; font-size:1em;
-      padding: 7px 15px; margin-right: 8px; margin-bottom:7px; box-shadow: 0 1px 8px #2562cf12; transition: background .15s, box-shadow .2s;
+      padding: 10px 18px; margin: 5px 5px 10px 0; box-shadow: 0 1px 8px #2562cf12; transition: background .15s, box-shadow .2s;
       font-weight:600; letter-spacing:-0.03em; cursor:pointer;}
     button:hover, input[type="button"]:hover {background: var(--primary-btn-hover); box-shadow: 0 2px 20px #2562cf2a;}
     #bulk-modal-inner {background: var(--card);}
@@ -40,21 +48,38 @@
     .weekday-checkboxes label {font-weight:500;margin-right:13px;}
     #schedule, .draggable-item {font-size:1em;}
     .draggable-item { background: var(--card); box-shadow: var(--shadow); border-radius:9px; border: 1.4px solid var(--border); margin-bottom:9px;
-      padding: 8px 16px; display: flex; align-items: center; transition: background .2s, box-shadow .15s;}
+      padding: 8px 10px; display: flex; align-items:center; transition: background .2s, box-shadow .15s;}
     body.dark .draggable-item {background:var(--dark-card); border-color:var(--dark-border);}
     .draggable-item.drop-target {background: #e5f2ff;}
     body.dark .draggable-item.drop-target {background: #2562cf19;}
     .drag-indicator {font-size:1.3em; color:#888; cursor:grab;margin-right:8px;}
     .progress-checkbox { accent-color: var(--main);}
     .note-input, .resource-tag, .resource-note {font-size:15px;}
-    #load-graph-container {margin-top:22px;}
-    #load-graph-bar > div { background: var(--main); border-radius:7px 7px 0 0; min-width:9px; margin-right:3px;}
-    body.dark #load-graph-bar > div {background:var(--dark-main);}
-    @media (max-width: 900px){ .card {padding:12px;} }
-    @media (max-width:700px){
-      body {margin:13px;}
-      .card, #bulk-modal-inner {padding:8px;}
-      #bulk-modal-inner {min-width:215px;}
+    /* Priorities */
+    .priority-high { border-left:6px solid var(--high);}
+    .priority-medium { border-left:6px solid var(--med);}
+    .priority-low { border-left:6px solid var(--low);}
+    body.dark .priority-high { border-left:6px solid var(--dark-high);}
+    body.dark .priority-medium { border-left:6px solid var(--dark-med);}
+    body.dark .priority-low { border-left:6px solid var(--dark-low);}
+    .priority-label {
+      font-weight:700;
+      font-size: .98em;
+      display: inline-block;
+      margin-right: 8px;
+    }
+    .priority-label.high { color:var(--high);}
+    .priority-label.medium { color:var(--med);}
+    .priority-label.low { color:var(--low);}
+    @media (max-width: 820px){
+      .card-row { flex-direction: column; align-items:stretch; gap:6px; }
+      .app-header {flex-direction:column;gap:8px;}
+    }
+    @media (max-width:500px){
+      .card{border-radius:8px;padding: 8px 6px 5px 6px;}
+      .draggable-item{padding:5px;}
+      label, .priority-label{font-size:.98em;}
+      h1{font-size:1.3em;}
     }
     #bulk-modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.16); z-index:1500;}
     #bulk-modal-inner { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
@@ -95,6 +120,14 @@
       <label>
         Rate per hour: <input type="number" class="rate-per-hour" min="1" value="10" style="width:70px;">
         <span class="rate-type-label">pages/hr</span>
+      </label>
+      <label>
+        Priority:
+        <select class="priority-dropdown">
+          <option value="high">High ⭐</option>
+          <option value="medium" selected>Medium</option>
+          <option value="low">Low</option>
+        </select>
       </label>
       <label>Tag: <input type="text" class="resource-tag" placeholder="Tag" style="width:90px;"></label>
       <label>Note: <input type="text" class="resource-note" placeholder="Note" style="width:120px;"></label>
@@ -165,11 +198,6 @@
 <div id="progress-label"></div>
 <button type="button" id="rebalance-btn" style="display:none;">Rebalance</button>
 <button type="button" id="adv-rebalance-btn" style="display:none;">Advanced Rebalance</button>
-<div id="load-graph-container" style="display:none;">
-  <b style="font-weight:600;">Daily Load Graph</b>
-  <div id="load-graph-bar"></div>
-  <div id="load-graph-legend"></div>
-</div>
 <div id="schedule"></div>
 <!-- Bulk Modal -->
 <div id="bulk-modal">
@@ -189,6 +217,14 @@
     <label>Rate/hour: <input type="number" id="bulk-rate-input" min="1" value="10" style="width:70px;">
       <span id="bulk-rate-type-label">pages/hr</span>
     </label>
+    <label>
+      Priority:
+      <select id="bulk-priority-dropdown">
+        <option value="high">High ⭐</option>
+        <option value="medium" selected>Medium</option>
+        <option value="low">Low</option>
+      </select>
+    </label>
     <label>Tag: <input type="text" id="bulk-tag-input" placeholder="Tag"></label>
     <label>Note: <input type="text" id="bulk-note-input" placeholder="Note"></label>
     <label class="bulk-pages-label">
@@ -201,6 +237,7 @@
   </div>
 </div>
 <script>
+// ---- Responsive, OS theme, Priorities ----
 const resourceTypeIcons = {
   book: "📚", qbank: "❓", flashcards: "🃏", video: "📺", other: "📄"
 };
@@ -225,6 +262,21 @@ const bulkPagesLabels = {
   other: "Items: "
 };
 
+// System-preference dark mode
+const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+function autoSetDarkMode() {
+  const useDark = darkModeQuery.matches || localStorage.getItem('darkOverride') === '1';
+  document.body.classList.toggle('dark', useDark);
+  document.getElementById('darkmode-btn').innerText = useDark ? "🌞" : "🌙";
+}
+darkModeQuery.addEventListener('change', autoSetDarkMode);
+autoSetDarkMode();
+document.getElementById('darkmode-btn').onclick = function() {
+  const wasDark = document.body.classList.contains('dark');
+  localStorage.setItem('darkOverride', wasDark ? '0' : '1');
+  autoSetDarkMode();
+};
+
 function updateRateTypeLabels() {
   document.querySelectorAll('.resource-row').forEach(row => {
     const typeSel = row.querySelector('.resource-type-dropdown');
@@ -243,7 +295,7 @@ function updateRateTypeLabels() {
   });
 }
 
-function addResourceRow(resourceVal="", pagesVal="", typeVal="book", tagVal="", noteVal="", intervalVal="1", rateVal="10") {
+function addResourceRow(resourceVal="", pagesVal="", typeVal="book", tagVal="", noteVal="", intervalVal="1", rateVal="10", priorityVal="medium") {
   const resourceList = document.getElementById('resource-list');
   const newRow = resourceList.firstElementChild.cloneNode(true);
   newRow.querySelector('.resource').value = resourceVal || "";
@@ -253,6 +305,7 @@ function addResourceRow(resourceVal="", pagesVal="", typeVal="book", tagVal="", 
   newRow.querySelector('.resource-note').value = noteVal;
   newRow.querySelector('.interval-dropdown').value = intervalVal;
   newRow.querySelector('.rate-per-hour').value = rateVal || 10;
+  newRow.querySelector('.priority-dropdown').value = priorityVal;
   updateRateTypeLabels();
   const removeBtn = newRow.querySelector('.remove-btn');
   removeBtn.style.display = 'inline';
@@ -272,7 +325,6 @@ document.getElementById('bulk-type-dropdown').addEventListener('change', functio
   document.querySelector('.bulk-pages-label').childNodes[0].textContent = bulkPagesLabels[this.value] || "Items: ";
 });
 
-// Multi off days logic
 document.getElementById('add-holiday-btn').onclick = function() {
   const holidayList = document.getElementById('holiday-list');
   const newRow = holidayList.firstElementChild.cloneNode(true);
@@ -282,7 +334,6 @@ document.getElementById('add-holiday-btn').onclick = function() {
   removeBtn.onclick = function() { newRow.remove(); };
   holidayList.appendChild(newRow);
 };
-// Allow at least one remove for subsequently added off days
 Array.from(document.querySelectorAll('.remove-holiday-btn')).forEach(btn => {
   btn.onclick = function() {
     if (btn.closest('.holiday-input-row').parentNode.childElementCount > 1) {
@@ -290,7 +341,6 @@ Array.from(document.querySelectorAll('.remove-holiday-btn')).forEach(btn => {
     }
   };
 });
-
 document.getElementById('bulk-confirm-btn').onclick = function() {
   const lines = document.getElementById('bulk-resource-input').value.split('\n').map(x=>x.trim()).filter(x=>x);
   const bulkType = document.getElementById('bulk-type-dropdown').value;
@@ -298,9 +348,10 @@ document.getElementById('bulk-confirm-btn').onclick = function() {
   const bulkNote = document.getElementById('bulk-note-input').value;
   const bulkPages = parseInt(document.getElementById('bulk-pages-input').value, 10) || 1;
   const bulkRate = parseInt(document.getElementById('bulk-rate-input').value, 10) || 10;
+  const bulkPriority = document.getElementById('bulk-priority-dropdown').value;
   if (!lines.length) { alert("Paste at least one resource"); return; }
   lines.forEach(name=>{
-    addResourceRow(name, bulkPages, bulkType, bulkTag, bulkNote, "1", bulkRate);
+    addResourceRow(name, bulkPages, bulkType, bulkTag, bulkNote, "1", bulkRate, bulkPriority);
   });
   document.getElementById('bulk-modal').style.display = 'none';
 };
@@ -343,6 +394,7 @@ document.getElementById('study-form').addEventListener('submit',function(event){
   const resourceTags = Array.from(document.querySelectorAll('.resource-tag')).map(e=>e.value);
   const resourceNotes = Array.from(document.querySelectorAll('.resource-note')).map(e=>e.value);
   const ratePerHour = Array.from(document.querySelectorAll('.rate-per-hour')).map(input=>parseInt(input.value,10) || 1);
+  const priorities = Array.from(document.querySelectorAll('.priority-dropdown')).map(sel=>sel.value);
   const studyHoursPerDay = parseInt(document.getElementById('study-hours-per-day').value, 10) || 1;
   const startDate = new Date(document.getElementById('start-date').value);
   const endDate = new Date(document.getElementById('end-date').value);
@@ -353,14 +405,14 @@ document.getElementById('study-form').addEventListener('submit',function(event){
 
   // Pass everything to plan object
   const planId = `${startDate.toISOString().slice(0,10)}_${endDate.toISOString().slice(0,10)}_${resourceNames.join('_')}_${weekDays.join('-')}_${skipDatesArr.join('-')}_${intervals.join('-')}`;
-  lastPlanConfig = {resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes, ratePerHour, studyHoursPerDay};
+  lastPlanConfig = {resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes, ratePerHour, priorities, studyHoursPerDay};
   lastScheduleDays = scheduleDays;
   const progress = loadProgress()[planId]||{};
   renderSchedule(lastPlanConfig,progress,false,resourceTypes,skipDatesArr);
 });
 
 function renderSchedule(planConfig, progress, rebalance = false, resourceTypesArg=null, skipDatesArr=null) {
-  const { resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes, ratePerHour, studyHoursPerDay } = planConfig;
+  const { resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes, ratePerHour, priorities, studyHoursPerDay } = planConfig;
   const numDays = scheduleDays.length;
   let remainingItems = pageCounts.slice();
   let doneItems = resourceNames.map((res, idx) => 0);
@@ -369,11 +421,10 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
   let types = resourceTypesArg || resourceTypes || [];
   let tags = resourceTags || Array(resourceNames.length).fill("");
   let resNotes = resourceNotes || Array(resourceNames.length).fill("");
+  let prios = priorities || Array(resourceNames.length).fill("medium");
   let skipArr = skipDatesArr || getSkipDates();
   let daysIdxArrList = resourceNames.map((r, idx)=>{let arr=[];for(let i=0;i<numDays;i+=intervals[idx])arr.push(i);return arr;});
   let tasksArr = [];
-  let workloadPerDay = Array(numDays).fill(0);
-  let timeUsedPerDay = Array(numDays).fill(0);
   let reviewRestMap = {}; skipArr.forEach(dateStr => reviewRestMap[dateStr]=true);
   for(let i=0;i<numDays;i++){
     const day = scheduleDays[i];
@@ -382,7 +433,7 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
       tasksArr.push({
         date: day.toLocaleDateString(), sortDate: day.getTime(),
         resource: "Rest/Review Day", type: "", tag:"", pages: "-", interval: "", id: `review_${dStr}_${i}`,
-        checked: "", note: ""
+        checked: "", note: "", priority:"medium", rawType:""
       });
       continue;
     }
@@ -396,10 +447,7 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
         let assignCount = Math.ceil(itemsTotal/arr.length);
         if (assignCount > maxAssignable) assignCount = maxAssignable;
         assignCount = Math.max(assignCount, 1);
-        workloadPerDay[i] += assignCount;
-        let timeNeeded = assignCount / ratePerHour[idx];
-        timeUsedPerDay[i] += timeNeeded;
-        timeLeft -= timeNeeded;
+        timeLeft -= assignCount / ratePerHour[idx];
         const taskId=`${planId}_${resource}_${i}`;
         const noteVal=notes[taskId]?notes[taskId]:'';
         const isChecked=progress[taskId]?"checked":"";
@@ -407,27 +455,44 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
           date: day.toLocaleDateString(), sortDate: day.getTime(),
           resource: `${resourceTypeIcons[types[idx]]} ${resource}`, type: resourceTypeLabels[types[idx]], rawType: types[idx], tag:tags[idx],
           pages: assignCount, interval:intervals[idx], id:taskId,
-          checked: isChecked, note: noteVal, resNote: resNotes[idx],
-          estTime: timeNeeded.toFixed(2)
+          checked: isChecked, note: noteVal, resNote: resNotes[idx], priority: prios[idx]
         });
       }
     });
   }
+  // Sort by: date, then priority high>medium>low, then by original order.
+  const prioSortOrder = {high:0, medium:1, low:2};
+  const groupedByDate = {};
+  tasksArr.forEach(task => {
+    if (!groupedByDate[task.date]) groupedByDate[task.date] = [];
+    groupedByDate[task.date].push(task);
+  });
+  let allDates = Object.keys(groupedByDate).sort((a,b)=> {
+    try { return new Date(a) - new Date(b); } catch { return a.localeCompare(b);}
+  });
+  let displayArr = [];
+  allDates.forEach(d => {
+    let arr = groupedByDate[d];
+    displayArr = displayArr.concat(arr.sort((a,b)=> (prioSortOrder[a.priority||"medium"] - prioSortOrder[b.priority||"medium"])));
+  });
+
   let scheduleHtml='<h2>Study Schedule</h2><ul id="draggable-list">';
-  tasksArr.forEach((item,idx)=>{
+  displayArr.forEach((item,idx)=>{
     if (item.resource === "Rest/Review Day") {
-      scheduleHtml += `<li class="draggable-item" style="background:#fffde3;">
+      scheduleHtml += `<li class="draggable-item priority-medium">
         <b>${item.date}</b>: <span style="color:#d88427;font-weight:bold;">Rest / Review Day</span>
       </li>`;
       return;
     }
-    scheduleHtml+=`<li class="draggable-item" draggable="true" data-tid="${item.id}">
+    const prioClass = item.priority==='high' ? 'priority-high' : item.priority==='low' ? 'priority-low' : 'priority-medium';
+    const prioLabel = `<span class="priority-label ${item.priority}">${item.priority==='high'?'⭐ High':item.priority==='medium'?'Medium':'Low'}</span>`;
+    scheduleHtml += `<li class="draggable-item ${prioClass}" draggable="true" data-tid="${item.id}">
       <span class="drag-indicator">&#x2630;</span>
       <input type="checkbox" class="progress-checkbox" data-task="${item.id}" ${item.checked}>
+      ${prioLabel}
       <b>${item.date}</b>: ${item.resource} <span style="color:#222;font-size:13px;">(${item.type})</span>
       <span style="color:#297bb7;font-size:13px;"> [${item.tag}]</span>,
       Assigned: <b>${item.pages}</b> <span style="font-size:13px;">(${rateTypeLabels[item.rawType]})</span>
-      <span style="color:#777;">Est: ${item.estTime} hrs</span>
       <span style="color:#777; font-style:italic;">${item.resNote}</span>
       <input type="text" class="note-input" data-task-note="${item.id}" placeholder="Add note..." value="${item.note}">
     </li>`;
@@ -478,7 +543,9 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
   });
 }
 
-// ---- ICS export ----
+// ICS & CSV export etc. keep as previously coded
+// ... [The export and backup logic from the previous code block remains unchanged; just copy those.]
+
 document.getElementById('download-ics-btn').onclick = function() {
   if (!lastPlanConfig) { alert('No schedule to export!'); return; }
   const incompleteTasks = [];
@@ -516,22 +583,22 @@ END:VCALENDAR`;
   setTimeout(()=>{document.body.removeChild(a); URL.revokeObjectURL(url);}, 100);
 };
 
-// ---- CSV Export ----
 document.getElementById('download-csv-btn').onclick = function() {
   if (!lastPlanConfig) { alert('No schedule to export!'); return; }
-  let csv = 'Date,Resource,Type,Tag,Assigned,Note\n';
+  let csv = 'Priority,Date,Resource,Type,Tag,Assigned,Note\n';
   const progress = loadProgress()[lastPlanConfig.planId] || {};
   document.querySelectorAll('.draggable-item').forEach(item => {
     const tid = item.getAttribute('data-tid');
     // Skip completed
     if (!tid || progress[tid]) return;
+    const prio = item.querySelector('.priority-label') ? item.querySelector('.priority-label').innerText.trim() : '';
     const date = item.querySelector('b') ? item.querySelector('b').innerText.trim() : '';
     const resource = item.querySelector('span:nth-of-type(2)') ? item.querySelector('span:nth-of-type(2)').innerText.trim() : '';
     const type = item.querySelector('span:nth-of-type(3)') ? item.querySelector('span:nth-of-type(3)').innerText.replace(/[\(\)]/g,'').trim() : '';
     const tag = item.querySelector('span:nth-of-type(4)') ? item.querySelector('span:nth-of-type(4)').innerText.replace(/[\[\]]/g,'').trim() : '';
     const assigned = (item.innerText.match(/Assigned: (\d+)/)||[])[1] || '';
     const note = item.querySelector('input[type=text]') ? item.querySelector('input[type=text]').value.replace(/,/g,';') : '';
-    csv += [date, resource, type, tag, assigned, note].map(x=>`"${x}"`).join(',')+'\n';
+    csv += [prio, date, resource, type, tag, assigned, note].map(x=>`"${x}"`).join(',')+'\n';
   });
   const blob = new Blob([csv], {type: 'text/csv'});
   const url = URL.createObjectURL(blob);
@@ -541,7 +608,6 @@ document.getElementById('download-csv-btn').onclick = function() {
   setTimeout(()=>{document.body.removeChild(a); URL.revokeObjectURL(url);}, 100);
 };
 
-// Print/PDF: hides everything except the #schedule container
 document.getElementById('download-pdf-btn').onclick = function() { window.print(); };
 
 function saveProgress(progress, notes, manualOrder) {
@@ -583,7 +649,6 @@ document.getElementById('restore-file').onchange = function(evt) {
   };
   if(file)reader.readAsText(file);
 };
-
 </script>
 </body>
 </html>
