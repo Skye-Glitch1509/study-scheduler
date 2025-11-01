@@ -24,6 +24,7 @@
       border-radius:10px;box-shadow:0 4px 18px #0002;padding:12px 36px;font-size:1.07em;opacity:0;transition:opacity .32s,top .32s;pointer-events:none;}
     #toast-notify.show { opacity:1;top:70px;pointer-events:auto;}
     @media(max-width:700px){.container{max-width:99vw;padding:10px 2vw;}.card-row,.resource-row,.btn-row{flex-direction:column;align-items:stretch;gap:8px;}}
+    .disabled-input { background:#e5eaf1 !important; color:#999 !important;}
   </style>
 </head>
 <body>
@@ -148,6 +149,8 @@
   <div class="schedule-list" id="schedule-list"></div>
 </div>
 <script>
+// resourceLibrary as before...
+
 const resourceLibrary = {
   "Marrow Video - Anatomy": { type: "video", total: 84 },
   "Marrow Video - Physiology": { type: "video", total: null },
@@ -193,10 +196,13 @@ const resourceLibrary = {
   "DocTutorials QBank": { type: "qbank", total: 13228 },
   "Robbins Pathology": { type: "book", total: 1024 }
 };
+
 function setupResourceAutofill(row) {
   const searchBox = row.querySelector('.resource-search');
   const typeSel = row.querySelector('.resource-type-dropdown');
   const totalBox = row.querySelector('.pages');
+  const noTotalChk = row.querySelector('.no-total-checkbox');
+  // resource autofill
   searchBox.addEventListener('change', function () {
     const val = searchBox.value.trim();
     if (resourceLibrary.hasOwnProperty(val)) {
@@ -206,31 +212,43 @@ function setupResourceAutofill(row) {
       if (meta.total) {
         totalBox.value = meta.total;
         totalBox.readOnly = true;
-        totalBox.style.background = "#e5eaf1";
+        totalBox.classList.add("disabled-input");
       } else {
         totalBox.value = '';
         totalBox.readOnly = false;
-        totalBox.style.background = "#fff";
+        totalBox.classList.remove("disabled-input");
       }
     } else {
-      // For custom, unlock both Type and Total fields.
       typeSel.value = "other";
       typeSel.disabled = false;
       totalBox.value = '';
       totalBox.readOnly = false;
-      totalBox.style.background = "#fff";
+      totalBox.classList.remove("disabled-input");
     }
   });
   totalBox.addEventListener('focus', function () {
-    totalBox.readOnly = false;
-    totalBox.style.background = "#fff";
+    if (!totalBox.readOnly) totalBox.classList.remove("disabled-input");
   });
   typeSel.onchange = function () {
-    // Always allow changing type for custom resources
     typeSel.disabled = false;
     totalBox.readOnly = false;
-    totalBox.style.background = "#fff";
+    totalBox.classList.remove("disabled-input");
   };
+  // noTotal checkbox effects
+  function handleNoTotalChange() {
+    if (noTotalChk.checked) {
+      totalBox.value = '';
+      totalBox.readOnly = true;
+      totalBox.classList.add("disabled-input");
+      totalBox.removeAttribute('required');
+    } else {
+      totalBox.readOnly = false;
+      totalBox.classList.remove("disabled-input");
+      totalBox.setAttribute('required', '');
+    }
+  }
+  noTotalChk.addEventListener('change', handleNoTotalChange);
+  handleNoTotalChange(); // initial state
 }
 function addResourceRow(resourceVal = "", typeVal = "video", totalVal = "", rateVal = "10") {
   const resourceList = document.getElementById('resource-list');
@@ -244,7 +262,6 @@ function addResourceRow(resourceVal = "", typeVal = "video", totalVal = "", rate
   removeBtn.style.display = 'inline';
   removeBtn.addEventListener('click', function () { newRow.remove(); });
   resourceList.appendChild(newRow);
-  setupResourceAutofill(newRow);
 }
 setupResourceAutofill(document.querySelector('.resource-row'));
 document.getElementById('add-resource-btn').addEventListener('click', function () { addResourceRow(); });
@@ -254,8 +271,7 @@ document.getElementById('study-form').addEventListener('submit', function (e) {
   const startDate = document.getElementById('start-date').value;
   const endDate = document.getElementById('end-date').value;
   if (!startDate || !endDate) return showToast("Start/end date required!", "#bc2d2d");
-  const start = new Date(startDate),
-        end = new Date(endDate);
+  const start = new Date(startDate), end = new Date(endDate);
   if (start > end) return showToast("End date must be after start!", "#bc2d2d");
   const hoursPerDay = +document.getElementById('study-hours-per-day').value;
   const resourceRows = Array.from(document.querySelectorAll('.resource-row'));
@@ -263,14 +279,15 @@ document.getElementById('study-form').addEventListener('submit', function (e) {
   resourceRows.forEach(row => {
     let name = row.querySelector('.resource-search').value.trim();
     let type = row.querySelector('.resource-type-dropdown').value;
-    let total = +row.querySelector('.pages').value;
+    let total = +row.querySelector('.pages').value || 0;
     let rate = +row.querySelector('.rate-per-hour').value;
     let note = row.querySelector('.resource-note').value.trim();
     let tag = row.querySelector('.resource-tag').value.trim();
     let priority = row.querySelector('.priority-dropdown').value;
     let interval = +row.querySelector('.interval-dropdown').value;
     let noTotal = row.querySelector('.no-total-checkbox').checked;
-    if (!name || (!noTotal && !total)) return;
+    if (!name) return;
+    if (!noTotal && !total) return; // require total unless noTotal
     plan.push({ name, type, total, rate, note, tag, priority, interval, noTotal });
   });
   let days = [];
@@ -279,13 +296,17 @@ document.getElementById('study-form').addEventListener('submit', function (e) {
   }
   let schedule = [];
   plan.forEach(resource => {
-    let count = resource.noTotal ? hoursPerDay * resource.rate * days.length :
-      Math.min(resource.total, hoursPerDay * days.length * resource.rate);
-    let index = 0, left = resource.total;
+    let index = 0;
+    let left = resource.total;
     for (let d = 0; d < days.length; d += resource.interval) {
       let day = new Date(days[d]);
-      let assign = resource.noTotal ? resource.rate : Math.min(resource.rate, left);
-      if (!resource.noTotal) left -= assign;
+      let assign;
+      if (resource.noTotal) {
+        assign = hoursPerDay * resource.rate; // Rate per hour × hours per day (purely by daily workload)
+      } else {
+        assign = Math.min(resource.rate, left);
+        left -= assign;
+      }
       schedule.push({
         resource: resource.name,
         type: resource.type,
@@ -344,6 +365,7 @@ function showToast(msg, color = "#2562cf") {
   setTimeout(() => toast.classList.remove("show"), 2100);
 }
 
+// Reset, backup, restore logic unchanged
 document.getElementById('reset-btn').onclick = function(){
   window._schedule = [];
   document.getElementById('schedule-list').innerHTML = "";
@@ -380,7 +402,7 @@ document.getElementById('restore-file').onchange = function(evt){
   reader.readAsText(file);
 };
 
-// Google Calendar export (.ics)—All-day compatible!
+// Google Calendar export (.ics) logic unchanged
 document.getElementById('export-gcal-btn').onclick = function() {
   const schedule = window._schedule || [];
   if (!schedule.length) return showToast("No schedule to export!", "#bc2d2d");
@@ -390,7 +412,6 @@ document.getElementById('export-gcal-btn').onclick = function() {
     "PRODID:-//FMGE-NEETPG-SCHEDULER//EN"
   ];
   schedule.forEach((task, i) => {
-    // All-day event: YYYYMMDD format, DTEND is next day
     let dtstart = task.date.replace(/-/g, "");
     let dtendObj = new Date(task.date);
     dtendObj.setDate(dtendObj.getDate() + 1);
