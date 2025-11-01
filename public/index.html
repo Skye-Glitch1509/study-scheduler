@@ -18,21 +18,41 @@
     #calendar-view{max-width:800px;margin:auto;}
     #chart-view{max-width:410px;margin:auto;}
     #gantt-view{max-width:720px;margin:auto;}
-    @media (max-width:900px){
-      .dashboard-layout{flex-direction:column;}
-      .sidebar-tabnav{flex-direction:row;min-width:0;gap:7px;}
-      #calendar-view,#gantt-view{max-width:99vw;}
+    #toast-notify {
+      position: fixed; z-index: 9999; left: 50%; top: 30px; transform: translateX(-50%);
+      background: #2562cf; color: #fff; font-weight: 600; border-radius: 10px; box-shadow: 0 4px 24px #0002;
+      padding: 18px 42px; font-size: 1.1em; opacity: 0; transition: opacity .25s,top .4s;
+      pointer-events: none;
     }
-    .app-header { display: flex; align-items:center; justify-content:space-between; margin:12px 0 9px 0;}
-    #darkmode-btn { border:none; background: #e5eaf1; color: #2562cf; width:38px; height:38px; font-size:23px;
-      border-radius:50%; cursor:pointer; margin-left:13px;margin-bottom:2px;}
+    #toast-notify.show { opacity: 1; top: 65px; pointer-events: auto;}
+    .modal-overlay {
+      background:rgba(34,44,64,.15); position:fixed; inset:0; z-index:1100; display:flex;
+      align-items:center; justify-content:center;
+    }
+    .modal-dialog {
+      background:#fff; border-radius:17px; box-shadow:0 6px 36px #232c4030; padding:34px 30px 30px 30px; max-width:400px;
+      min-width:250px; text-align:center; border:1px solid #e2e2f4;
+    }
+    .modal-dialog h2 { margin-top:0; }
+    .modal-dialog button { margin-top:18px;}
     .card{background:#fff;box-shadow:0 2px 14px #23262f10; border-radius:16px; border:1px solid #e2e8f0;padding:13px 20px 10px 17px;margin-bottom:12px;}
     .card-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center; margin-bottom:7px;}
     .card-row label{font-weight:500;margin-right:7px;}
+    .collapsible-week{background:#e9effa;border-radius:14px;padding:0 18px 18px 18px;margin:15px 0;}
+    .collapsible-title{cursor:pointer;padding:9px 0;font-weight:600;}
+    .collapsible-content{display:none;}
+    .collapsible-open .collapsible-content{display:block;}
+    .collapsible-open .collapsible-title:after{content:' ▲';color:#2562cf;}
+    .collapsible-title:after{content:' ▼';color:#2562cf;}
     .draggable-item{ background:#fff; box-shadow:0 2px 14px #23262f10; border-radius:9px; border:1.4px solid #e2e8f0; margin-bottom:13px; padding:12px 8px; display:flex; align-items:center; transition:background .2s,box-shadow .15s; position:relative; touch-action:pan-y; user-select:none;}
-    .priority-high { border-left:6px solid #fa3939;}
+    .priority-high { border-left:6px solid #fa3939; }
     .priority-medium { border-left:6px solid #fabf3a;}
     .priority-low { border-left:6px solid #7ed957;}
+    .resource-type-book { background: #fff8f2; }
+    .resource-type-qbank { background: #f2fcff; }
+    .resource-type-flashcards { background: #fafff2; }
+    .resource-type-video { background: #f2f6ff; }
+    .resource-type-other { background: #f8f2ff; }
     .priority-label{font-weight:700;font-size:.99em;display:inline-block;margin-right:8px;}
     .priority-label.high { color:#fa3939;}
     .priority-label.medium { color:#fabf3a;}
@@ -46,13 +66,14 @@
   </style>
 </head>
 <body>
+<div id="toast-notify"></div>
 <div class="app-header">
   <h1>Study Scheduler</h1>
   <button id="darkmode-btn" aria-label="Toggle dark mode">🌙</button>
 </div>
 <div class="dashboard-layout">
   <nav class="sidebar-tabnav" aria-label="Main navigation">
-    <button id="nav-list" class="active">List</button>
+    <button id="nav-list" class="active">List & Plan</button>
     <button id="nav-calendar">Calendar</button>
     <button id="nav-gantt">Gantt</button>
     <button id="nav-analytics">Analytics</button>
@@ -64,7 +85,7 @@
           <label>Study hours per day: <input type="number" id="study-hours-per-day" min="1" max="24" value="3" style="width:72px;"></label>
         </div>
         <div id="resource-list">
-          <div class="card card-row resource-row">
+          <div class="card card-row resource-row" draggable="true">
             <label>Resource: <input type="text" class="resource" required></label>
             <label class="resource-pages-label">
               Pages: <input type="number" class="pages" required style="width:70px;">
@@ -85,6 +106,18 @@
             <label>
               <input type="checkbox" class="no-total-checkbox">
               <span class="no-total-label">No total/end (repeat rate every eligible day)</span>
+            </label>
+            <label>
+              Recurrence:
+              <select class="resource-recur-dropdown">
+                <option value="all">All eligible days</option>
+                <option value="monwedfri">Mon/Wed/Fri</option>
+                <option value="weekends">Weekends</option>
+                <option value="custom">Custom</option>
+              </select>
+            </label>
+            <label class="custom-recur-label" style="display:none;">
+              Only these days: <input type="text" class="custom-recur" placeholder="e.g. 1,3,5 (Mon, Wed, Fri)">
             </label>
             <label>
               Priority:
@@ -158,6 +191,7 @@
         <button type="button" id="backup-btn">Backup JSON</button>
         <button type="button" id="restore-btn">Restore JSON</button>
         <input type="file" id="restore-file" style="display:none;">
+        <button type="button" id="auto-catchup-btn">Auto Catch-Up (redistribute missed)</button>
       </div>
       <div id="schedule"></div>
     </section>
@@ -170,6 +204,37 @@
   </main>
 </div>
 <script>
+// --- Toast Notification ---
+function showToast(msg, color="#2562cf") {
+  const toast = document.getElementById("toast-notify");
+  toast.textContent = msg;
+  toast.style.background = color;
+  toast.classList.add("show");
+  setTimeout(()=>toast.classList.remove("show"), 2200);
+}
+
+// --- Modal Overlay ---
+function showModal(title,msg,btnMsg="OK") {
+  if(document.getElementById("custom-modal"))return;
+  const overlay = document.createElement("div");
+  overlay.className="modal-overlay";
+  overlay.id="custom-modal";
+  overlay.innerHTML = `<div class="modal-dialog"><h2>${title}</h2><div>${msg}</div><button>${btnMsg}</button></div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector("button").onclick=()=>overlay.remove();
+}
+
+// --- Drag-and-drop for resources ---
+function sortableResourceRows() {
+  const list = document.getElementById('resource-list');
+  let dragged = null;
+  list.addEventListener('dragstart',e=>{ dragged=e.target; dragged.style.opacity=0.5; });
+  list.addEventListener('dragend',e=>{ if(dragged)dragged.style.opacity=1; dragged=null; });
+  list.addEventListener('dragover',e=>{e.preventDefault(); const over=e.target.closest('.resource-row'); if (over&&dragged&&over!==dragged) list.insertBefore(dragged, over.nextSibling); });
+}
+sortableResourceRows();
+
+// --- Dark mode and tab nav logic (compressed, unchanged) ---
 const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 function autoSetDarkMode() {
   const useDark = darkModeQuery.matches || localStorage.getItem('darkOverride') === '1';
@@ -183,7 +248,6 @@ document.getElementById('darkmode-btn').onclick = function() {
   localStorage.setItem('darkOverride', wasDark ? '0' : '1');
   autoSetDarkMode();
 };
-
 function showPanel(panel){
   Array.from(document.querySelectorAll('.section-panel')).forEach(sec=>sec.style.display='none');
   document.getElementById(`${panel}-view`).style.display='';
@@ -199,7 +263,6 @@ const resourceTypeIcons = {book:"📚", qbank:"❓", flashcards:"🃏", video:"�
 const resourceTypeLabels = {book:"Book",qbank:"QBank",flashcards:"Flashcards",video:"Video",other:"Other"};
 const rateTypeLabels = {book:"pages/hr",qbank:"questions/hr",flashcards:"cards/hr",video:"videos/hr",other:"items/hr"};
 const pagesLabels = {book:"Pages: ",qbank:"Questions: ",flashcards:"Cards: ",video:"Videos: ",other:"Items: "};
-
 function updateRateTypeLabels() {
   document.querySelectorAll('.resource-row').forEach(row => {
     const typeSel = row.querySelector('.resource-type-dropdown');
@@ -218,6 +281,12 @@ function updateRateTypeLabels() {
       };
       disablePagesInput(noTotal.checked);
     }
+    // Recurrence custom UI:
+    const recurSel = row.querySelector('.resource-recur-dropdown');
+    const customRecurLabel = row.querySelector('.custom-recur-label');
+    recurSel.onchange = function() {
+      customRecurLabel.style.display = recurSel.value === "custom" ? "" : "none";
+    };
     if (typeSel && rateLabel) rateLabel.textContent = rateTypeLabels[typeSel.value] || "items/hr";
     if (typeSel && pagesLabel) pagesLabel.childNodes[0].textContent = pagesLabels[typeSel.value] || "Items: ";
     typeSel.addEventListener('change', function() {
@@ -226,7 +295,7 @@ function updateRateTypeLabels() {
     });
   });
 }
-function addResourceRow(resourceVal="", pagesVal="", typeVal="book", tagVal="", noteVal="", intervalVal="1", rateVal="10", priorityVal="medium", noTotal=false) {
+function addResourceRow(resourceVal="", pagesVal="", typeVal="book", tagVal="", noteVal="", intervalVal="1", rateVal="10", priorityVal="medium", noTotal=false, recurVal="all", customRecur="") {
   const resourceList = document.getElementById('resource-list');
   const newRow = resourceList.firstElementChild.cloneNode(true);
   newRow.querySelector('.resource').value = resourceVal || "";
@@ -238,6 +307,8 @@ function addResourceRow(resourceVal="", pagesVal="", typeVal="book", tagVal="", 
   newRow.querySelector('.rate-per-hour').value = rateVal || 10;
   newRow.querySelector('.priority-dropdown').value = priorityVal;
   newRow.querySelector('.no-total-checkbox').checked = noTotal;
+  newRow.querySelector('.resource-recur-dropdown').value = recurVal;
+  newRow.querySelector('.custom-recur').value = customRecur;
   updateRateTypeLabels();
   const removeBtn = newRow.querySelector('.remove-btn');
   removeBtn.style.display = 'inline';
@@ -280,18 +351,39 @@ function getScheduleDays(startDate, endDate, weekDays, skipDatesArr) {
     dt.setDate(dt.getDate() + 1); }
   return days;
 }
+/* --- Advanced Scheduling with Recurrence --- */
+function getRecurrenceArrs(resourceRows, scheduleDaysList) {
+  // For each resource, determines eligible schedule days given the "Recurrence" selector
+  return Array.from(resourceRows).map((row, idx) => {
+    const recur = row.querySelector('.resource-recur-dropdown').value;
+    if (recur === "all") return scheduleDaysList.map((_,i)=>i);
+    if (recur === "monwedfri")   return scheduleDaysList.map((d,i)=>[1,3,5].includes(d.getDay())?i:null).filter(x=>x!==null);
+    if (recur === "weekends")    return scheduleDaysList.map((d,i)=>[0,6].includes(d.getDay())?i:null).filter(x=>x!==null);
+    if (recur === "custom") {
+      const txt = row.querySelector('.custom-recur').value;
+      if (!txt) return scheduleDaysList.map((_,i)=>i);
+      const allowed = txt.split(",").map(x=>parseInt(x.trim())).filter(x=>!isNaN(x));
+      return scheduleDaysList.map((d,i)=>allowed.includes(d.getDay())?i:null).filter(x=>x!==null);
+    }
+    return scheduleDaysList.map((_,i)=>i);
+  });
+}
+
 document.getElementById('study-form').addEventListener('submit',function(event){
   event.preventDefault();
-  const resourceNames = Array.from(document.querySelectorAll('.resource')).map(input=>input.value);
-  const pageCountsRaw = Array.from(document.querySelectorAll('.pages')).map(input=>input.value);
-  const noTotalArr = Array.from(document.querySelectorAll('.no-total-checkbox')).map(cb=>cb.checked);
+  const resourceRows = Array.from(document.querySelectorAll('.resource-row'));
+  const resourceNames = resourceRows.map(row=>row.querySelector('.resource').value);
+  const pageCountsRaw = resourceRows.map(row=>row.querySelector('.pages').value);
+  const noTotalArr = resourceRows.map(row=>row.querySelector('.no-total-checkbox').checked);
   const pageCounts = pageCountsRaw.map((v, idx) => noTotalArr[idx] ? null : parseInt(v, 10));
-  const intervals = Array.from(document.querySelectorAll('.interval-dropdown')).map(select=>parseInt(select.value,10));
-  const resourceTypes = Array.from(document.querySelectorAll('.resource-type-dropdown')).map(e=>e.value);
-  const resourceTags = Array.from(document.querySelectorAll('.resource-tag')).map(e=>e.value);
-  const resourceNotes = Array.from(document.querySelectorAll('.resource-note')).map(e=>e.value);
-  const ratePerHour = Array.from(document.querySelectorAll('.rate-per-hour')).map(input=>parseInt(input.value,10) || 1);
-  const priorities = Array.from(document.querySelectorAll('.priority-dropdown')).map(sel=>sel.value);
+  const intervals = resourceRows.map(row=>parseInt(row.querySelector('.interval-dropdown').value,10));
+  const resourceTypes = resourceRows.map(row=>row.querySelector('.resource-type-dropdown').value);
+  const resourceTags = resourceRows.map(row=>row.querySelector('.resource-tag').value);
+  const resourceNotes = resourceRows.map(row=>row.querySelector('.resource-note').value);
+  const recurVals = resourceRows.map(row=>row.querySelector('.resource-recur-dropdown').value);
+  const customRecurs = resourceRows.map(row=>row.querySelector('.custom-recur').value);
+  const ratePerHour = resourceRows.map(row=>parseInt(row.querySelector('.rate-per-hour').value,10) || 1);
+  const priorities = resourceRows.map(row=>row.querySelector('.priority-dropdown').value);
   const studyHoursPerDay = parseInt(document.getElementById('study-hours-per-day').value, 10) || 1;
   const startDate = new Date(document.getElementById('start-date').value);
   const endDate = new Date(document.getElementById('end-date').value);
@@ -299,34 +391,35 @@ document.getElementById('study-form').addEventListener('submit',function(event){
   const reviewDayInterval = parseInt(document.getElementById('review-dropdown').value, 10) || 0;
   const skipDatesArr = getRestDays(startDate, endDate, reviewDayInterval);
   const scheduleDays = getScheduleDays(startDate, endDate, weekDays, skipDatesArr);
+  const recurrenceArrs = getRecurrenceArrs(resourceRows, scheduleDays);
+
   const planId = `${startDate.toISOString().slice(0,10)}_${endDate.toISOString().slice(0,10)}_${resourceNames.join('_')}_${weekDays.join('-')}_${skipDatesArr.join('-')}_${intervals.join('-')}`;
   window.lastPlanConfig = {
-    resourceNames, pageCounts, pageCountsRaw, noTotalArr,
-    intervals, startDate, endDate, planId, scheduleDays,
-    resourceTypes, resourceTags, resourceNotes, ratePerHour,
-    priorities, studyHoursPerDay
+    resourceNames, pageCounts, pageCountsRaw, noTotalArr, intervals, startDate, endDate, planId, scheduleDays,
+    recurrenceArrs, recurVals, customRecurs,
+    resourceTypes, resourceTags, resourceNotes, ratePerHour, priorities, studyHoursPerDay
   };
   window.lastScheduleDays = scheduleDays;
   const progress = loadProgress()[planId]||{};
   renderSchedule(window.lastPlanConfig,progress,false,resourceTypes,skipDatesArr);
   renderAllViews();
+  showToast('Schedule generated!', "#26994a");
 });
-
 function renderSchedule(planConfig, progress, rebalance = false, resourceTypesArg=null, skipDatesArr=null) {
   const {
     resourceNames, pageCounts, noTotalArr, intervals,
     startDate, endDate, planId, scheduleDays,
+    recurrenceArrs, recurVals, customRecurs,
     resourceTypes, resourceTags, resourceNotes, ratePerHour,
     priorities, studyHoursPerDay
   } = planConfig;
   const numDays = scheduleDays.length;
   let notes = loadNotes()[planId] || {};
-  let types = resourceTypesArg || resourceTypes || [];
   let tags = resourceTags || Array(resourceNames.length).fill("");
   let resNotes = resourceNotes || Array(resourceNames.length).fill("");
   let prios = priorities || Array(resourceNames.length).fill("medium");
   let skipArr = skipDatesArr || getSkipDates();
-  let daysIdxArrList = resourceNames.map((r, idx)=>
+  let daysIdxArrList = recurrenceArrs || resourceNames.map((r, idx)=>
     noTotalArr[idx] ? Array(numDays).fill(0).map((_,i)=>i)
       : (()=>{let arr=[];for(let i=0;i<numDays;i+=intervals[idx])arr.push(i);return arr;})()
   );
@@ -339,8 +432,9 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
     if (reviewRestMap[dStr]) {
       tasksArr.push({
         date: day.toLocaleDateString(), sortDate: day.getTime(),
+        week: getWeekOfYear(day),
         resource: "Rest/Review Day", type: "", tag:"", pages: "-", interval: "", id: `review_${dStr}_${i}`,
-        checked: "", note: "", priority:"medium", rawType:""
+        checked: "", note: "", priority:"medium", rawType:"", isInfinite: false
       });
       continue;
     }
@@ -358,7 +452,9 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
         const isChecked=progress[taskId]?"checked":"";
         tasksArr.push({
           date: day.toLocaleDateString(), sortDate: day.getTime(),
-          resource: `${resourceTypeIcons[types[idx]]} ${resource}`, type: resourceTypeLabels[types[idx]], rawType: types[idx], tag:tags[idx],
+          week: getWeekOfYear(day),
+          resource: `${resourceTypeIcons[resourceTypes[idx]]} ${resource}`,
+          type: resourceTypeLabels[resourceTypes[idx]], rawType: resourceTypes[idx], tag:tags[idx],
           pages: assignCount, interval:intervals[idx], id:taskId,
           checked: isChecked, note: noteVal, resNote: resNotes[idx], priority: prios[idx], isInfinite: noTotalArr[idx]
         });
@@ -367,51 +463,55 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
   }
   // Sort by: date, then priority high>medium>low
   const prioSortOrder = {high:0, medium:1, low:2};
-  const groupedByDate = {};
+  const groupedByWeek = {};
   tasksArr.forEach(task => {
-    if (!groupedByDate[task.date]) groupedByDate[task.date] = [];
-    groupedByDate[task.date].push(task);
+    if (!groupedByWeek[task.week]) groupedByWeek[task.week] = [];
+    groupedByWeek[task.week].push(task);
   });
-  let allDates = Object.keys(groupedByDate).sort((a,b)=> new Date(a) - new Date(b));
-  let displayArr = [];
-  allDates.forEach(d => {
-    let arr = groupedByDate[d];
-    displayArr = displayArr.concat(arr.sort((a,b)=> (prioSortOrder[a.priority||"medium"] - prioSortOrder[b.priority||"medium"])));
-  });
+  let allWeeks = Object.keys(groupedByWeek).sort((a,b)=> a-b);
   let scheduleHtml;
-  if (displayArr.length === 0) {
+  if (tasksArr.length === 0) {
     scheduleHtml = '<h2>Study Schedule</h2><div style="color:#bc2d2d;margin:24px;">No tasks scheduled. Please add resources and create a schedule.</div>';
   } else {
-    scheduleHtml='<h2>Study Schedule</h2><ul id="draggable-list">';
-    displayArr.forEach((item,idx)=>{
-      if (item.resource === "Rest/Review Day") {
-        scheduleHtml += `<li class="draggable-item priority-medium" tabindex="0">
-          <b>${item.date}</b>: <span style="color:#d88427;font-weight:bold;">Rest / Review Day</span>
+    scheduleHtml='<h2>Study Schedule</h2>';
+    allWeeks.forEach(week => {
+      scheduleHtml += `<div class='collapsible-week'><div class='collapsible-title'>Week ${week}</div><div class='collapsible-content'>`;
+      groupedByWeek[week].forEach((item,idx)=>{
+        if (item.resource === "Rest/Review Day") {
+          scheduleHtml += `<li class="draggable-item priority-medium" tabindex="0">
+            <b>${item.date}</b>: <span style="color:#d88427;font-weight:bold;">Rest / Review Day</span>
+          </li>`;
+          return;
+        }
+        const prioClass = item.priority==='high' ? 'priority-high' : item.priority==='low' ? 'priority-low' : 'priority-medium';
+        const typeClass = 'resource-type-' + (item.rawType || 'other');
+        const prioLabel = `<span class="priority-label ${item.priority}">${item.priority==='high'?'⭐ High':item.priority==='medium'?'Medium':'Low'}</span>`;
+        scheduleHtml += `<li class="draggable-item ${prioClass} ${typeClass}" draggable="true" tabindex="0" role="listitem" data-tid="${item.id}">
+          <span class="drag-indicator" aria-label="Drag" tabindex="-1">&#x2630;</span>
+          <input type="checkbox" class="progress-checkbox" data-task="${item.id}" ${item.checked} aria-label="Mark complete">
+          ${prioLabel}
+          <b>${item.date}</b>: ${item.resource}
+          <span style="color:#222;font-size:13px;">(${item.type})</span>
+          <span style="color:#297bb7;font-size:13px;"> [${item.tag}]</span>,
+          Assigned: <b>${item.pages}</b>
+          <span style="font-size:13px;">(${rateTypeLabels[item.rawType]})</span>
+          <span style="color:#777; font-style:italic;">${item.resNote}</span>
+          ${item.isInfinite ? "<span style='color:#555;font-size:0.95em;font-style:italic;'>(infinite)</span>" : ""}
+          <input type="text" class="note-input" data-task-note="${item.id}" placeholder="Add note..." value="${item.note}" aria-label="Task note">
+          <button class="del-btn" aria-label="Delete task" tabindex="-1">✖</button>
         </li>`;
-        return;
-      }
-      const prioClass = item.priority==='high' ? 'priority-high' : item.priority==='low' ? 'priority-low' : 'priority-medium';
-      const prioLabel = `<span class="priority-label ${item.priority}">${item.priority==='high'?'⭐ High':item.priority==='medium'?'Medium':'Low'}</span>`;
-      scheduleHtml += `<li class="draggable-item ${prioClass}" draggable="true" tabindex="0" role="listitem" data-tid="${item.id}">
-        <span class="drag-indicator" aria-label="Drag" tabindex="-1">&#x2630;</span>
-        <input type="checkbox" class="progress-checkbox" data-task="${item.id}" ${item.checked} aria-label="Mark complete">
-        ${prioLabel}
-        <b>${item.date}</b>: ${item.resource}
-        <span style="color:#222;font-size:13px;">(${item.type})</span>
-        <span style="color:#297bb7;font-size:13px;"> [${item.tag}]</span>,
-        Assigned: <b>${item.pages}</b>
-        <span style="font-size:13px;">(${rateTypeLabels[item.rawType]})</span>
-        <span style="color:#777; font-style:italic;">${item.resNote}</span>
-        ${item.isInfinite ? "<span style='color:#555;font-size:0.95em;font-style:italic;'>(infinite)</span>" : ""}
-        <input type="text" class="note-input" data-task-note="${item.id}" placeholder="Add note..." value="${item.note}" aria-label="Task note">
-        <button class="del-btn" aria-label="Delete task" tabindex="-1">✖</button>
-      </li>`;
+      });
+      scheduleHtml += "</div></div>";
     });
-    scheduleHtml+='</ul>';
   }
   document.getElementById('schedule').innerHTML=scheduleHtml;
 
   setTimeout(()=>{
+    // Collapsible week setup
+    Array.from(document.querySelectorAll('.collapsible-title')).forEach(titleEl=>{
+      titleEl.onclick=function(){titleEl.parentNode.classList.toggle("collapsible-open");};
+      if(titleEl.parentNode === document.querySelector('.collapsible-week')) titleEl.parentNode.classList.add('collapsible-open'); // expand first week by default
+    });
     let items=Array.from(document.querySelectorAll('.draggable-item'));
     items.forEach((item, idx)=>{
       let touchstartX=0, touchendX=0;
@@ -445,8 +545,9 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
         saveData[planConfig.planId]=saveData[planConfig.planId]||{};
         saveData[planConfig.planId][this.dataset.task]=this.checked?true:false;
         saveProgress(saveData,saveNotes,manualOrder);
-        renderSchedule(planConfig,saveData[planConfig.planId],rebalance,types,skipArr);
+        renderSchedule(planConfig,saveData[planConfig.planId],rebalance,resourceTypes,skipDatesArr);
         renderAllViews();
+        showToast(this.checked?"Task marked as complete!":"Task marked as incomplete.");
       });
     });
     document.querySelectorAll('.note-input').forEach(noteInput=>{
@@ -455,9 +556,18 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
         saveNotes[planConfig.planId]=saveNotes[planConfig.planId]||{};
         saveNotes[planConfig.planId][this.dataset.taskNote]=this.value;
         saveProgress(saveData,saveNotes,manualOrder);
+        showToast("Note saved!");
       });
     });
   },30);
+}
+
+function getWeekOfYear(d) {
+  d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  var dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
 }
 function extractScheduleArrFromModel() {
   let arr=[];
@@ -475,7 +585,8 @@ function extractScheduleArrFromModel() {
             : plan.pageCounts && plan.pageCounts[ri] ? plan.pageCounts[ri] : 0,
           priority: plan.priorities ? plan.priorities[ri] : 'medium',
           checked: progress[`${plan.planId}_${name}_${i}`]||false,
-          isInfinite: plan.noTotalArr ? plan.noTotalArr[ri] : false
+          isInfinite: plan.noTotalArr ? plan.noTotalArr[ri] : false,
+          type: plan.resourceTypes ? plan.resourceTypes[ri] : 'other'
         });
       });
     });
@@ -500,7 +611,7 @@ function renderCalendar(schedule) {
   (schedule||[]).forEach(task=>{
     if(task.resource && !task.checked) {
       events.push({
-        title: task.resource + (task.isInfinite ? " (∞)" : "") + ' (' + task.pages + ')',
+        title: resourceTypeIcons[task.type] + " " + task.resource + (task.isInfinite ? " (∞)" : "") + ' (' + task.pages + ')',
         start: task.dateObj,
         allDay: true,
         color: task.priority==='high'?'#fa3939':task.priority==='medium'?'#fabf3a':'#7ed957'
@@ -513,7 +624,7 @@ function renderCalendar(schedule) {
     height:530,
     editable:true,
     eventClick:function(info){
-      alert(info.event.title + " on " + info.event.startStr);
+      showModal("Task Info",info.event.title + "<br>on " + info.event.startStr,"Close");
     }
   });
   calendar.render();
@@ -531,7 +642,7 @@ function renderGantt(schedule) {
     let barTasks = tasks.filter(x=>x.resource===resource);
     html+=`<div><b>${resource}</b><div style="display:flex;">`;
     barTasks.forEach(t=>{
-      html+=`<div style="flex:1;padding:3px 0;margin:0 2px;background:${t.priority==='high'?'#fa3939':t.priority==='medium'?'#fabf3a':'#7ed957'};" title="${t.date}">${t.date}${t.isInfinite?" ∞":""}</div>`;
+      html+=`<div style="flex:1;padding:3px 0;margin:0 2px;background:${t.type==='book'?'#fff8f2':t.type==='qbank'?'#f2fcff':t.type==='flashcards'?'#fafff2':t.type==='video'?'#f2f6ff':'#f8f2ff'};" title="${t.date}">${t.date}${t.isInfinite?" ∞":""}</div>`;
     });
     html+='</div></div>';
   });
@@ -560,8 +671,12 @@ function renderAnalyticsChart() {
   let summary = resources.map((r,i)=>`<b>${r}</b>: ${values[i]} assigned`).join('<br>');
   document.getElementById('analytics-summary').innerHTML = summary;
 }
+
+document.getElementById('auto-catchup-btn').onclick = function() {
+  showToast("Catch-up feature not implemented yet – planned for next upgrade!", "#fa3939");
+};
 document.getElementById('download-csv-btn').onclick = function() {
-  if (!window.lastPlanConfig) { alert('No schedule to export!'); return; }
+  if (!window.lastPlanConfig) { showToast('No schedule to export!',"#bc2d2d"); return; }
   let csv = 'Priority,Date,Resource,Type,Tag,Assigned,Note\n';
   const progress = loadProgress()[window.lastPlanConfig.planId] || {};
   document.querySelectorAll('.draggable-item').forEach(item => {
@@ -582,10 +697,11 @@ document.getElementById('download-csv-btn').onclick = function() {
   a.href = url; a.download = 'study_schedule.csv';
   document.body.appendChild(a); a.click();
   setTimeout(()=>{document.body.removeChild(a); URL.revokeObjectURL(url);}, 100);
+  showToast("CSV exported!");
 };
 
 document.getElementById('download-ics-btn').onclick = function() {
-  if (!window.lastPlanConfig) { alert('No schedule to export!'); return; }
+  if (!window.lastPlanConfig) { showToast('No schedule to export!',"#bc2d2d"); return; }
   const incompleteTasks = [];
   const progress = loadProgress()[window.lastPlanConfig.planId] || {};
   const scheduleDiv = document.getElementById('schedule');
@@ -615,19 +731,20 @@ END:VCALENDAR`;
   a.href = url; a.download = 'study_schedule.ics';
   document.body.appendChild(a); a.click();
   setTimeout(()=>{document.body.removeChild(a); URL.revokeObjectURL(url);}, 100);
+  showToast("ICS exported!");
 };
 
 document.getElementById('download-pdf-btn').onclick = function() {
   const scheduleDiv = document.getElementById('schedule');
   if (!scheduleDiv || scheduleDiv.innerText.trim().length === 0 || /no tasks scheduled/i.test(scheduleDiv.innerHTML)) {
-    alert("No schedule found to export. Please create a schedule first.");
+    showToast("No schedule found to export. Please create a schedule first.", "#bc2d2d");
     return;
   }
   window.print();
+  showToast("Print/PDF started!");
 };
-
 document.getElementById('backup-btn').onclick = function() {
-  if (!window.lastPlanConfig) { alert('No schedule to export!'); return; }
+  if (!window.lastPlanConfig) { showToast('No schedule to export!',"#bc2d2d"); return; }
   let json = JSON.stringify({
     planConfig: window.lastPlanConfig || {},
     progress: window.lastProgressCache || {},
@@ -640,6 +757,7 @@ document.getElementById('backup-btn').onclick = function() {
   a.href = url; a.download = "study_plan_backup.json";
   document.body.appendChild(a); a.click();
   setTimeout(()=>{document.body.removeChild(a);window.URL.revokeObjectURL(url);},100);
+  showToast("Backup downloaded!");
 };
 
 document.getElementById('restore-btn').onclick = function() { document.getElementById('restore-file').click(); };
@@ -657,9 +775,9 @@ document.getElementById('restore-file').onchange = function(evt) {
       window.lastOrderCache = obj.manualOrder || {};
       renderSchedule(window.lastPlanConfig, window.lastProgressCache, false);
       renderAllViews();
-      alert('Backup restored!');
+      showToast('Backup restored!', "#26994a");
     } catch(e) {
-      alert('Could not parse backup. File may be corrupted or from an incompatible/old version.');
+      showToast('Could not parse backup. File may be corrupted or from an incompatible/old version.', "#bc2d2d");
     }
   };
   reader.readAsText(file);
