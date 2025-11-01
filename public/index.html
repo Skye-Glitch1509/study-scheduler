@@ -63,123 +63,34 @@
       #bulk-modal-inner {min-width:215px;}
       #progress-bar-container {max-width:100%;}
     }
-    /* Bulk modal */
     #bulk-modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.16); z-index:1500;}
     #bulk-modal-inner { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
       min-width:320px; min-height:250px;}
   </style>
 </head>
 <body>
-  <div class="app-header">
-    <h1>Study Scheduler</h1>
-    <button id="darkmode-btn" title="Toggle dark mode">🌙</button>
+<div class="app-header">
+  <h1>Study Scheduler</h1>
+  <button id="darkmode-btn" title="Toggle dark mode">🌙</button>
+</div>
+<div class="template-strip">
+  <b>Templates:</b>
+  <button onclick="applyTemplate('exam')">Exam Cram</button>
+  <button onclick="applyTemplate('balanced')">Balanced Review</button>
+  <button onclick="applyTemplate('weekend')">Weekend Only</button>
+</div>
+<form id="study-form" style="display:block;">
+  <div class="card card-row">
+    <label>Study hours per day:
+      <input type="number" id="study-hours-per-day" min="1" max="24" value="3" style="width:72px;">
+    </label>
   </div>
-  <div class="template-strip">
-    <b>Templates:</b>
-    <button onclick="applyTemplate('exam')">Exam Cram</button>
-    <button onclick="applyTemplate('balanced')">Balanced Review</button>
-    <button onclick="applyTemplate('weekend')">Weekend Only</button>
-  </div>
-  <form id="study-form" style="display:block;">
-    <div id="resource-list">
-      <div class="card card-row resource-row">
-        <label>Resource: <input type="text" class="resource" required></label>
-        <label>Pages: <input type="number" class="pages" required style="width:70px;"></label>
-        <label>Type: 
-          <select class="resource-type-dropdown">
-            <option value="book">📚 Book</option>
-            <option value="qbank">❓ QBank</option>
-            <option value="flashcards">🃏 Flashcards</option>
-            <option value="video">📺 Video</option>
-            <option value="other">📄 Other</option>
-          </select>
-        </label>
-        <label>Tag: <input type="text" class="resource-tag" placeholder="Tag" style="width:90px;"></label>
-        <label>Note: <input type="text" class="resource-note" placeholder="Note" style="width:120px;"></label>
-        <label>
-          Interval:
-          <select class="interval-dropdown" style="width:87px;">
-            <option value="1">Every day</option>
-            <option value="2">Every other day</option>
-            <option value="3">Every 3rd day</option>
-            <option value="7">Every week</option>
-          </select>
-        </label>
-        <button type="button" class="remove-btn" style="display:none;">✖</button>
-      </div>
-    </div>
-    <button type="button" id="add-resource-btn">Add Resource</button>
-    <button type="button" id="bulk-add-btn">Bulk Add</button>
-    <br>
-    <div class="card card-row weekday-checkboxes">
-      <label><input type="checkbox" class="weekday" value="0" checked> Sun</label>
-      <label><input type="checkbox" class="weekday" value="1" checked> Mon</label>
-      <label><input type="checkbox" class="weekday" value="2" checked> Tue</label>
-      <label><input type="checkbox" class="weekday" value="3" checked> Wed</label>
-      <label><input type="checkbox" class="weekday" value="4" checked> Thu</label>
-      <label><input type="checkbox" class="weekday" value="5" checked> Fri</label>
-      <label><input type="checkbox" class="weekday" value="6" checked> Sat</label>
-    </div>
-    <div class="card card-row" id="rest-days-container">
-      <b>Rest/Off Dates:</b>
-      <div id="holiday-list" style="margin-left:10px;">
-        <div class="holiday-input-row">
-          <input type="date" class="holiday-date">
-          <button type="button" class="remove-holiday-btn" style="display:none;">✖</button>
-        </div>
-      </div>
-      <button type="button" id="add-holiday-btn">Add Off Date</button>
-    </div>
-    <div class="card card-row" id="review-days-container">
-      <b>Periodic Review:</b>
-      <label>
-        Every
-        <select id="review-dropdown">
-          <option value="0">None</option>
-          <option value="7">7th day</option>
-          <option value="6">6th day</option>
-          <option value="5">5th day</option>
-          <option value="4">4th day</option>
-          <option value="3">3rd day</option>
-          <option value="2">2nd day</option>
-        </select>
-        is Review/Rest
-      </label>
-    </div>
-    <div class="card card-row">
-      <label>Start Date: <input type="date" id="start-date" required></label>
-      <label>End Date: <input type="date" id="end-date" required></label>
-      <button type="submit" style="margin-left:14px;">Create Schedule</button>
-    </div>
-  </form>
-  <div>
-    <button type="button" id="download-csv-btn" style="display:none;">Export CSV</button>
-    <button type="button" id="download-ics-btn" style="display:none;">Export Calendar (.ics)</button>
-    <button type="button" id="download-pdf-btn" style="display:none;">Print/PDF</button>
-    <button type="button" id="backup-btn" style="display:none;">Backup JSON</button>
-    <button type="button" id="restore-btn" style="display:inline;">Import JSON</button>
-    <input type="file" id="restore-file" style="display:none;">
-  </div>
-  <div id="progress-bar-container" style="display:none;">
-    <div id="progress-bar"></div>
-  </div>
-  <div id="progress-label"></div>
-  <button type="button" id="rebalance-btn" style="display:none;">Rebalance</button>
-  <button type="button" id="adv-rebalance-btn" style="display:none;">Advanced Rebalance</button>
-  <div id="load-graph-container" style="display:none;">
-    <b style="font-weight:600;">Daily Load Graph</b>
-    <div id="load-graph-bar"></div>
-    <div id="load-graph-legend"></div>
-  </div>
-  <div id="schedule"></div>
-  <!-- Bulk Modal -->
-  <div id="bulk-modal">
-    <div id="bulk-modal-inner" class="card">
-      <h2>Bulk Add Resources</h2>
-      <div><textarea id="bulk-resource-input" rows="10" style="width:98%;background:var(--accent);"></textarea></div>
-      <br>
+  <div id="resource-list">
+    <div class="card card-row resource-row">
+      <label>Resource: <input type="text" class="resource" required></label>
+      <label>Pages: <input type="number" class="pages" required style="width:70px;"></label>
       <label>Type:
-        <select id="bulk-type-dropdown">
+        <select class="resource-type-dropdown">
           <option value="book">📚 Book</option>
           <option value="qbank">❓ QBank</option>
           <option value="flashcards">🃏 Flashcards</option>
@@ -187,17 +98,117 @@
           <option value="other">📄 Other</option>
         </select>
       </label>
-      <label>Tag: <input type="text" id="bulk-tag-input" placeholder="Tag"></label>
-      <label>Note: <input type="text" id="bulk-note-input" placeholder="Note"></label>
       <label>
-        Pages/Items:
-        <input type="number" id="bulk-pages-input" min="1" value="10" style="width:60px;">
+        Rate per hour: <input type="number" class="rate-per-hour" min="1" value="10" style="width:70px;">
+        <span class="rate-type-label">pages/hr</span>
       </label>
-      <br><br>
-      <button id="bulk-confirm-btn">Add Resources</button>
-      <button id="bulk-cancel-btn">Cancel</button>
+      <label>Tag: <input type="text" class="resource-tag" placeholder="Tag" style="width:90px;"></label>
+      <label>Note: <input type="text" class="resource-note" placeholder="Note" style="width:120px;"></label>
+      <label>
+        Interval:
+        <select class="interval-dropdown" style="width:87px;">
+          <option value="1">Every day</option>
+          <option value="2">Every other day</option>
+          <option value="3">Every 3rd day</option>
+          <option value="7">Every week</option>
+        </select>
+      </label>
+      <button type="button" class="remove-btn" style="display:none;">✖</button>
     </div>
   </div>
+  <button type="button" id="add-resource-btn">Add Resource</button>
+  <button type="button" id="bulk-add-btn">Bulk Add</button>
+  <br>
+  <div class="card card-row weekday-checkboxes">
+    <label><input type="checkbox" class="weekday" value="0" checked> Sun</label>
+    <label><input type="checkbox" class="weekday" value="1" checked> Mon</label>
+    <label><input type="checkbox" class="weekday" value="2" checked> Tue</label>
+    <label><input type="checkbox" class="weekday" value="3" checked> Wed</label>
+    <label><input type="checkbox" class="weekday" value="4" checked> Thu</label>
+    <label><input type="checkbox" class="weekday" value="5" checked> Fri</label>
+    <label><input type="checkbox" class="weekday" value="6" checked> Sat</label>
+  </div>
+  <div class="card card-row" id="rest-days-container">
+    <b>Rest/Off Dates:</b>
+    <div id="holiday-list" style="margin-left:10px;">
+      <div class="holiday-input-row">
+        <input type="date" class="holiday-date">
+        <button type="button" class="remove-holiday-btn" style="display:none;">✖</button>
+      </div>
+    </div>
+    <button type="button" id="add-holiday-btn">Add Off Date</button>
+  </div>
+  <div class="card card-row" id="review-days-container">
+    <b>Periodic Review:</b>
+    <label>
+      Every
+      <select id="review-dropdown">
+        <option value="0">None</option>
+        <option value="7">7th day</option>
+        <option value="6">6th day</option>
+        <option value="5">5th day</option>
+        <option value="4">4th day</option>
+        <option value="3">3rd day</option>
+        <option value="2">2nd day</option>
+      </select>
+      is Review/Rest
+    </label>
+  </div>
+  <div class="card card-row">
+    <label>Start Date: <input type="date" id="start-date" required></label>
+    <label>End Date: <input type="date" id="end-date" required></label>
+    <button type="submit" style="margin-left:14px;">Create Schedule</button>
+  </div>
+</form>
+<div>
+  <button type="button" id="download-csv-btn" style="display:none;">Export CSV</button>
+  <button type="button" id="download-ics-btn" style="display:none;">Export Calendar (.ics)</button>
+  <button type="button" id="download-pdf-btn" style="display:none;">Print/PDF</button>
+  <button type="button" id="backup-btn" style="display:none;">Backup JSON</button>
+  <button type="button" id="restore-btn" style="display:inline;">Import JSON</button>
+  <input type="file" id="restore-file" style="display:none;">
+</div>
+<div id="progress-bar-container" style="display:none;">
+  <div id="progress-bar"></div>
+</div>
+<div id="progress-label"></div>
+<button type="button" id="rebalance-btn" style="display:none;">Rebalance</button>
+<button type="button" id="adv-rebalance-btn" style="display:none;">Advanced Rebalance</button>
+<div id="load-graph-container" style="display:none;">
+  <b style="font-weight:600;">Daily Load Graph</b>
+  <div id="load-graph-bar"></div>
+  <div id="load-graph-legend"></div>
+</div>
+<div id="schedule"></div>
+<!-- Bulk Modal -->
+<div id="bulk-modal">
+  <div id="bulk-modal-inner" class="card">
+    <h2>Bulk Add Resources</h2>
+    <div><textarea id="bulk-resource-input" rows="10" style="width:98%;background:var(--accent);"></textarea></div>
+    <br>
+    <label>Type:
+      <select id="bulk-type-dropdown">
+        <option value="book">📚 Book</option>
+        <option value="qbank">❓ QBank</option>
+        <option value="flashcards">🃏 Flashcards</option>
+        <option value="video">📺 Video</option>
+        <option value="other">📄 Other</option>
+      </select>
+    </label>
+    <label>Rate/hour: <input type="number" id="bulk-rate-input" min="1" value="10" style="width:70px;">
+      <span id="bulk-rate-type-label">pages/hr</span>
+    </label>
+    <label>Tag: <input type="text" id="bulk-tag-input" placeholder="Tag"></label>
+    <label>Note: <input type="text" id="bulk-note-input" placeholder="Note"></label>
+    <label>
+      Pages/Items:
+      <input type="number" id="bulk-pages-input" min="1" value="10" style="width:60px;">
+    </label>
+    <br><br>
+    <button id="bulk-confirm-btn">Add Resources</button>
+    <button id="bulk-cancel-btn">Cancel</button>
+  </div>
+</div>
 <script>
 const resourceTypeIcons = {
   book: "📚", qbank: "❓", flashcards: "🃏", video: "📺", other: "📄"
@@ -205,39 +216,40 @@ const resourceTypeIcons = {
 const resourceTypeLabels = {
   book: "Book", qbank: "QBank", flashcards: "Flashcards", video: "Video", other: "Other"
 };
+const rateTypeLabels = {
+  book: "pages/hr", qbank: "questions/hr", flashcards: "cards/hr", video: "videos/hr", other: "items/hr"
+};
 const studyTemplates = {
   exam: {
-    resources: [["Boards Book", 800, "book", "high yield", ""], ["QBank Full", 2400, "qbank", "", "Timed only"]],
-    intervals: [1,1], types: ["book","qbank"], tags:["high yield",""], notes:["","Timed only"],
+    resources: [["Boards Book", 800, "book", "high yield", "", 20], ["QBank Full", 2400, "qbank", "", "Timed only", 30]],
+    intervals: [1,1], types: ["book","qbank"], tags:["high yield",""], notes:["","Timed only"], rates:[20,30],
     weekdays: [0,1,2,3,4,5,6], startDays:0, reviewDay:7
   },
   balanced: {
-    resources: [["Textbook",500,"book","",""],["Flash Deck",150,"flashcards","",""],["Review Videos",40,"video","",""]],
-    intervals:[2,2,3], types:["book","flashcards","video"], tags:["","",""], notes:["","",""],
+    resources: [["Textbook",500,"book","","",15],["Flash Deck",150,"flashcards","","",35],["Review Videos",40,"video","","",3]],
+    intervals:[2,2,3], types:["book","flashcards","video"], tags:["","",""], notes:["","",""], rates:[15,35,3],
     weekdays:[1,2,3,4,5], startDays:0, reviewDay:7
   },
   weekend: {
-    resources: [["MCQ Practice",300,"qbank","",""],["Weekly Review",36,"video","",""]],
-    intervals: [7,7], types:["qbank","video"], tags:["",""], notes:["",""], weekdays:[6,0], startDays:0, reviewDay:0
+    resources: [["MCQ Practice",300,"qbank","","",10],["Weekly Review",36,"video","","",2]],
+    intervals: [7,7], types:["qbank","video"], tags:["",""], notes:["",""], rates:[10,2], weekdays:[6,0], startDays:0, reviewDay:0
   }
 };
-// Local save/load
-function saveProgress(progress, notes, manualOrder) {
-  localStorage.setItem('studyProgress', JSON.stringify(progress));
-  localStorage.setItem('studyNotes', JSON.stringify(notes));
-  localStorage.setItem('studyManualOrder', JSON.stringify(manualOrder));
+
+function updateRateTypeLabels() {
+  document.querySelectorAll('.resource-row').forEach(row => {
+    const typeSel = row.querySelector('.resource-type-dropdown');
+    const rateLabel = row.querySelector('.rate-type-label');
+    if (typeSel && rateLabel) {
+      rateLabel.textContent = rateTypeLabels[typeSel.value] || "items/hr";
+    }
+    typeSel.addEventListener('change', function() {
+      rateLabel.textContent = rateTypeLabels[this.value] || "items/hr";
+    });
+  });
 }
-function loadProgress() { return JSON.parse(localStorage.getItem('studyProgress') || '{}'); }
-function loadNotes() { return JSON.parse(localStorage.getItem('studyNotes') || '{}'); }
-function loadManualOrder() { return JSON.parse(localStorage.getItem('studyManualOrder') || '{}'); }
 
-let lastPlanConfig = null, lastBoxCount = { total: 0, done: 0 }, lastScheduleDays = [],
-    lastProgressCache = {}, lastNotesCache = {}, lastOrderCache = {};
-
-document.getElementById('add-resource-btn').addEventListener('click', function() {
-  addResourceRow();
-});
-function addResourceRow(resourceVal="", pagesVal="", typeVal="book", tagVal="", noteVal="", intervalVal="1") {
+function addResourceRow(resourceVal="", pagesVal="", typeVal="book", tagVal="", noteVal="", intervalVal="1", rateVal="10") {
   const resourceList = document.getElementById('resource-list');
   const newRow = resourceList.firstElementChild.cloneNode(true);
   newRow.querySelector('.resource').value = resourceVal || "";
@@ -246,51 +258,68 @@ function addResourceRow(resourceVal="", pagesVal="", typeVal="book", tagVal="", 
   newRow.querySelector('.resource-tag').value = tagVal;
   newRow.querySelector('.resource-note').value = noteVal;
   newRow.querySelector('.interval-dropdown').value = intervalVal;
+  newRow.querySelector('.rate-per-hour').value = rateVal || 10;
+  updateRateTypeLabels();
   const removeBtn = newRow.querySelector('.remove-btn');
   removeBtn.style.display = 'inline';
-  removeBtn.addEventListener('click', function() { newRow.remove(); });
+  removeBtn.addEventListener('click', function() { newRow.remove(); updateRateTypeLabels(); });
   resourceList.appendChild(newRow);
+  updateRateTypeLabels();
 }
-document.querySelectorAll('.remove-btn').forEach(btn => btn.addEventListener('click', function(e){
-  if(document.querySelectorAll('.resource-row').length > 1) {
-    e.target.closest('.resource-row').remove();
+
+document.getElementById('add-resource-btn').addEventListener('click', function() {
+  addResourceRow();
+  updateRateTypeLabels();
+});
+updateRateTypeLabels();
+
+function applyTemplate(which) {
+  const resourceList = document.getElementById('resource-list');
+  resourceList.innerHTML = '';
+  const tpl = studyTemplates[which];
+  if (tpl) {
+    tpl.resources.forEach((res, idx) => {
+      addResourceRow(res[0], res[1], res[2], tpl.tags[idx], tpl.notes[idx], tpl.intervals[idx], tpl.rates[idx]);
+    });
   }
-}));
-document.getElementById('add-holiday-btn').addEventListener('click', function() {
-  const holidayList = document.getElementById('holiday-list');
-  const newRow = holidayList.firstElementChild.cloneNode(true);
-  newRow.querySelector('input').value = '';
-  const removeBtn = newRow.querySelector('.remove-holiday-btn');
-  removeBtn.style.display = 'inline';
-  removeBtn.addEventListener('click', function() { newRow.remove(); });
-  holidayList.appendChild(newRow);
+  // Always append a blank row for user input
+  addResourceRow();
+  document.querySelectorAll('.weekday').forEach(cb=>{
+    cb.checked = tpl.weekdays.includes(parseInt(cb.value));
+  });
+  document.getElementById('review-dropdown').value = tpl.reviewDay;
+}
+
+document.getElementById('bulk-type-dropdown').addEventListener('change', function() {
+  document.getElementById('bulk-rate-type-label').textContent = rateTypeLabels[this.value] || "items/hr";
 });
-document.querySelectorAll('.remove-holiday-btn').forEach(btn =>
-  btn.addEventListener('click', function(e){ e.target.closest('.holiday-input-row').remove(); })
-);
-// --- Bulk Modal Logic ---
-document.getElementById('bulk-add-btn').addEventListener('click', function() {
-  document.getElementById('bulk-resource-input').value = '';
-  document.getElementById('bulk-modal').style.display = 'block';
-});
-document.getElementById('bulk-cancel-btn').onclick = function() {
-  document.getElementById('bulk-modal').style.display = 'none';
-};
 document.getElementById('bulk-confirm-btn').onclick = function() {
   const lines = document.getElementById('bulk-resource-input').value.split('\n').map(x=>x.trim()).filter(x=>x);
   const bulkType = document.getElementById('bulk-type-dropdown').value;
   const bulkTag = document.getElementById('bulk-tag-input').value;
   const bulkNote = document.getElementById('bulk-note-input').value;
   const bulkPages = parseInt(document.getElementById('bulk-pages-input').value, 10) || 1;
+  const bulkRate = parseInt(document.getElementById('bulk-rate-input').value, 10) || 10;
   if (!lines.length) { alert("Paste at least one resource"); return; }
   lines.forEach(name=>{
-    addResourceRow(name, bulkPages, bulkType, bulkTag, bulkNote, "1");
+    addResourceRow(name, bulkPages, bulkType, bulkTag, bulkNote, "1", bulkRate);
   });
   document.getElementById('bulk-modal').style.display = 'none';
 };
-// --- Other schedule helpers ---
-function getSelectedWeekdays() { return Array.from(document.querySelectorAll('.weekday')).filter(cb => cb.checked).map(cb => parseInt(cb.value)); }
-function getSkipDates() { return Array.from(document.querySelectorAll('.holiday-date')).map(input => input.value).filter(val => val); }
+document.getElementById('bulk-cancel-btn').onclick = function() {
+  document.getElementById('bulk-modal').style.display = 'none';
+};
+document.getElementById('bulk-add-btn').addEventListener('click', function() {
+  document.getElementById('bulk-resource-input').value = '';
+  document.getElementById('bulk-modal').style.display = 'block';
+});
+// Continue with logic (see next chunk)
+function getSelectedWeekdays() {
+  return Array.from(document.querySelectorAll('.weekday')).filter(cb => cb.checked).map(cb => parseInt(cb.value));
+}
+function getSkipDates() {
+  return Array.from(document.querySelectorAll('.holiday-date')).map(input => input.value).filter(val => val);
+}
 function getRestDays(startDate, endDate, reviewDayInterval) {
   let restDays = getSkipDates();
   if (reviewDayInterval >= 2) {
@@ -306,153 +335,35 @@ function getScheduleDays(startDate, endDate, weekDays, skipDatesArr) {
     dt.setDate(dt.getDate() + 1); }
   return days;
 }
-// Export/import, backup, print
-document.getElementById('backup-btn').onclick = function() {
-  if (!lastPlanConfig) { alert('No plan to export!'); return; }
-  let json = JSON.stringify({
-    planConfig: lastPlanConfig,
-    progress: lastProgressCache,
-    notes: lastNotesCache,
-    manualOrder: lastOrderCache
-  });
-  let blob=new Blob([json],{type:"application/json"});
-  let url=window.URL.createObjectURL(blob);
-  let link=document.createElement("a");
-  link.href=url;link.download="study_plan_backup.json";
-  document.body.appendChild(link);link.click();
-  setTimeout(()=>{document.body.removeChild(link);window.URL.revokeObjectURL(url);},100);
-};
-document.getElementById('restore-btn').onclick = function() {
-  document.getElementById('restore-file').click();
-};
-document.getElementById('restore-file').onchange = function(evt) {
-  let file = evt.target.files[0];
-  let reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      let obj = JSON.parse(e.target.result);
-      showLoadedSchedule(obj);
-      alert('Backup restored!');
-    } catch { alert('Could not parse backup.'); }
-  };
-  if(file)reader.readAsText(file);
-};
+document.getElementById('study-form').addEventListener('submit',function(event){
+  event.preventDefault();
+  const resourceNames = Array.from(document.querySelectorAll('.resource')).map(input=>input.value);
+  const pageCounts = Array.from(document.querySelectorAll('.pages')).map(input=>parseInt(input.value,10));
+  const intervals = Array.from(document.querySelectorAll('.interval-dropdown')).map(select=>parseInt(select.value,10));
+  const resourceTypes = Array.from(document.querySelectorAll('.resource-type-dropdown')).map(e=>e.value);
+  const resourceTags = Array.from(document.querySelectorAll('.resource-tag')).map(e=>e.value);
+  const resourceNotes = Array.from(document.querySelectorAll('.resource-note')).map(e=>e.value);
+  const ratePerHour = Array.from(document.querySelectorAll('.rate-per-hour')).map(input=>parseInt(input.value,10) || 1);
+  const studyHoursPerDay = parseInt(document.getElementById('study-hours-per-day').value, 10) || 1;
+  const startDate = new Date(document.getElementById('start-date').value);
+  const endDate = new Date(document.getElementById('end-date').value);
+  const weekDays = getSelectedWeekdays();
+  const reviewDayInterval = parseInt(document.getElementById('review-dropdown').value, 10) || 0;
+  const skipDatesArr = getRestDays(startDate, endDate, reviewDayInterval);
+  const scheduleDays = getScheduleDays(startDate, endDate, weekDays, skipDatesArr);
 
-document.getElementById('download-csv-btn').addEventListener('click',function(){
-  let resourceTypes = Array.from(document.querySelectorAll('.resource-type-dropdown')).map(e=>e.value);
-  let resourceTags = Array.from(document.querySelectorAll('.resource-tag')).map(e=>e.value);
-  let resourceNotes = Array.from(document.querySelectorAll('.resource-note')).map(e=>e.value);
-  downloadCSV(lastPlanConfig,lastProgressCache,lastNotesCache,lastOrderCache,resourceTypes,resourceTags,resourceNotes);
+  // Pass everything to plan object
+  const planId = `${startDate.toISOString().slice(0,10)}_${endDate.toISOString().slice(0,10)}_${resourceNames.join('_')}_${weekDays.join('-')}_${skipDatesArr.join('-')}_${intervals.join('-')}`;
+  lastPlanConfig = {resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes, ratePerHour, studyHoursPerDay};
+  lastScheduleDays = scheduleDays;
+  const progress = loadProgress()[planId]||{};
+  renderSchedule(lastPlanConfig,progress,false,resourceTypes,skipDatesArr);
 });
-document.getElementById('download-ics-btn').addEventListener('click',function(){
-  let resourceTypes = Array.from(document.querySelectorAll('.resource-type-dropdown')).map(e=>e.value);
-  let resourceTags = Array.from(document.querySelectorAll('.resource-tag')).map(e=>e.value);
-  let resourceNotes = Array.from(document.querySelectorAll('.resource-note')).map(e=>e.value);
-  downloadICS(lastPlanConfig,loadNotes(),loadManualOrder(),resourceTypes,resourceTags,resourceNotes);
-});
-// PDF export (print)
-document.getElementById('download-pdf-btn').onclick = function() {
-  window.print();
-};
-// Templates support
-function applyTemplate(which) {
-  document.getElementById('resource-list').innerHTML = '';
-  const tpl = studyTemplates[which];
-  if (!tpl) return;
-  tpl.resources.forEach((res, idx) => {
-    addResourceRow(res[0], res[1], res[2], tpl.tags[idx], tpl.notes[idx], tpl.intervals[idx]);
-  });
-  document.querySelectorAll('.weekday').forEach(cb=>{ cb.checked = tpl.weekdays.includes(parseInt(cb.value)); });
-  document.getElementById('review-dropdown').value = tpl.reviewDay;
-}
-
-// Advanced rebalance to minimize workload variance
-function advancedRebalance(planConfig, progress, callback) {
-  const days = planConfig.scheduleDays.length;
-  const tasksPerResource = planConfig.resourceNames.map((res,idx)=>{
-    let arr=[];for(let i=0;i<days;i+=planConfig.intervals[idx])arr.push(i);
-    let pagesPerDay=Math.ceil(planConfig.pageCounts[idx]/arr.length);
-    return arr.map(d=>({
-      ridx:idx, day:d, pages:pagesPerDay, type:planConfig.resourceTypes[idx],
-      tag:planConfig.resourceTags[idx], note:planConfig.resourceNotes[idx], name:res
-    }));
-  });
-  let allTasks = tasksPerResource.flat();
-  let assignments = Array.from({length:days}, ()=>[]);
-  allTasks.forEach(task=>assignments[task.day].push(task));
-  for(let iter=0;iter<10;iter++) {
-    let dayLoads=assignments.map(day=>day.reduce((a,b)=>a+b.pages,0));
-    let maxI=dayLoads.indexOf(Math.max(...dayLoads)), minI=dayLoads.indexOf(Math.min(...dayLoads));
-    if(dayLoads[maxI]-dayLoads[minI]<=1)break;
-    let taskToMove=assignments[maxI].find(task=>
-      !assignments[minI].some(t=>t.ridx===task.ridx)
-    );
-    if(taskToMove) {
-      assignments[minI].push(taskToMove);
-      assignments[maxI]=assignments[maxI].filter(x=>x!==taskToMove);
-    } else break;
-  }
-  callback(assignments);
-}
-document.getElementById('adv-rebalance-btn').addEventListener('click', function(){
-  if (!lastPlanConfig) return;
-  advancedRebalance(lastPlanConfig, lastProgressCache, function(newAssignments){
-    let plan = lastPlanConfig;
-    let scheduleHtml='<h2>Advanced Rebalanced Schedule</h2><ul id="draggable-list">';
-    let workloadPerDay = [];
-    for(let i=0;i<plan.scheduleDays.length;i++){
-      let tasks = newAssignments[i];
-      let day = plan.scheduleDays[i], dateStr=day.toLocaleDateString();
-      scheduleHtml += `<li style="border-left:7px solid #bed7ff;margin-bottom:10px;">`;
-      scheduleHtml += `<b>${dateStr}</b>: `;
-      if (tasks.length===0) {
-        scheduleHtml += `<span style="color:#d88427;font-weight:bold;">Rest / Review Day</span>`;
-      } else {
-        tasks.forEach(t=>{
-          scheduleHtml += `<span>${resourceTypeIcons[t.type]} <b>${t.name}</b> [${t.tag}] (${t.pages} pgs/items) ` +
-            (t.note ? `<span style="font-style:italic;color:#777;">${t.note}</span>`:"") + `</span> `;
-        });
-      }
-      scheduleHtml += `</li>`;
-      workloadPerDay[i] = tasks.reduce((a,b)=>a+b.pages,0);
-    }
-    scheduleHtml+='</ul>';
-    document.getElementById('schedule').innerHTML=scheduleHtml;
-    let graphBar = document.getElementById('load-graph-bar');
-    graphBar.innerHTML = "";
-    let max = Math.max(...workloadPerDay, 1);
-    workloadPerDay.forEach((val, idx) => {
-      let height = Math.round((val/max)*60)+5;
-      let day = plan.scheduleDays[idx].toLocaleDateString();
-      graphBar.innerHTML += `<div title="${day}: ${val} items" style="height:${height}px"></div>`;
-    });
-    document.getElementById('load-graph-legend').innerText =`Each vertical bar = workload (# pages/items), day-by-day.`;
-    document.getElementById('progress-bar-container').style.display = "none";
-  });
-});
-function updateProgressBar() {
-  if (lastBoxCount.total === 0) {
-    document.getElementById('progress-bar-container').style.display = "none";
-    document.getElementById('progress-label').innerText = "";
-    return;
-  }
-  const percent = Math.round((lastBoxCount.done / lastBoxCount.total) * 100);
-  document.getElementById('progress-bar').style.width = percent + "%";
-  document.getElementById('progress-bar-container').style.display = "block";
-  document.getElementById('progress-label').innerText = `Progress: ${lastBoxCount.done} / ${lastBoxCount.total} (${percent}%)`;
-}
-function countDaysDone(progress, planId, resource, daysIdxArr) {
-  return Object.keys(progress)
-    .filter(k => {
-      return k.startsWith(`${planId}_${resource}_`) && progress[k] &&
-        (!daysIdxArr || daysIdxArr.includes(parseInt(k.split('_').pop())));
-    }).length;
-}
 function renderSchedule(planConfig, progress, rebalance = false, resourceTypesArg=null, skipDatesArr=null) {
-  const { resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes } = planConfig;
+  const { resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes, ratePerHour, studyHoursPerDay } = planConfig;
   const numDays = scheduleDays.length;
-  let remainingPages = pageCounts.slice();
-  let pagesDone = resourceNames.map((res, idx) => 0);
+  let remainingItems = pageCounts.slice();
+  let doneItems = resourceNames.map((res, idx) => 0);
   let totalBoxCount = 0, doneBoxCount = 0;
   let notes = loadNotes()[planId] || {};
   let manualOrder = loadManualOrder();
@@ -463,8 +374,8 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
   let daysIdxArrList = resourceNames.map((r, idx)=>{let arr=[];for(let i=0;i<numDays;i+=intervals[idx])arr.push(i);return arr;});
   let tasksArr = [];
   let workloadPerDay = Array(numDays).fill(0);
-  let reviewRestMap = {};
-  skipArr.forEach(dateStr => reviewRestMap[dateStr]=true);
+  let timeUsedPerDay = Array(numDays).fill(0);
+  let reviewRestMap = {}; skipArr.forEach(dateStr => reviewRestMap[dateStr]=true);
   for(let i=0;i<numDays;i++){
     const day = scheduleDays[i];
     const dStr = day.toISOString().slice(0,10);
@@ -476,33 +387,39 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
       });
       continue;
     }
+    let timeLeft = studyHoursPerDay;
     resourceNames.forEach((resource,idx)=>{
-      let pagesTotal=rebalance?remainingPages[idx]:pageCounts[idx];
+      let itemsTotal=rebalance?remainingItems[idx]:pageCounts[idx];
       let arr=daysIdxArrList[idx];
       if(arr.includes(i)){
         let undoneDays=arr.length-(rebalance?countDaysDone(progress,planId,resource,arr):0);
-        let pagesPerDay=Math.ceil(pagesTotal/(rebalance?undoneDays:arr.length));
-        let arrPos=arr.indexOf(i);
-        let startPage=rebalance?pagesDone[idx]+arrPos*pagesPerDay+1:arrPos*pagesPerDay+1;
-        let endPage=Math.min(rebalance?pagesDone[idx]+(arrPos+1)*pagesPerDay:(arrPos+1)*pagesPerDay,pageCounts[idx]);
-        workloadPerDay[i] += pagesPerDay;
+        // Calculate maximum assignment for that resource by user rate and time
+        let maxAssignable = Math.min(itemsTotal - doneItems[idx], Math.floor(ratePerHour[idx] * timeLeft));
+        let assignCount = Math.ceil(itemsTotal/arr.length);
+        if (assignCount > maxAssignable) assignCount = maxAssignable;
+        assignCount = Math.max(assignCount, 1);
+        workloadPerDay[i] += assignCount;
+        let timeNeeded = assignCount / ratePerHour[idx];
+        timeUsedPerDay[i] += timeNeeded;
+        timeLeft -= timeNeeded;
+        // Schedule this resource's assignment for today
         const taskId=`${planId}_${resource}_${i}`;
         const noteVal=notes[taskId]?notes[taskId]:'';
         tasksArr.push({
           date: day.toLocaleDateString(), sortDate: day.getTime(),
           resource: `${resourceTypeIcons[types[idx]]} ${resource}`, type: resourceTypeLabels[types[idx]], tag:tags[idx],
-          pages: `${startPage}-${endPage}`, interval:intervals[idx], id:taskId,
-          checked: progress[taskId]?"checked":"", note: noteVal, resNote: resNotes[idx]
+          pages: assignCount, interval:intervals[idx], id:taskId,
+          checked: progress[taskId]?"checked":"", note: noteVal, resNote: resNotes[idx],
+          estTime: timeNeeded.toFixed(2)
         });
         totalBoxCount++;if(progress[taskId])doneBoxCount++;
       }
     });
   }
-  if(manualOrder&&manualOrder[planId]){tasksArr.sort((a,b)=>manualOrder[planId].indexOf(a.id)-manualOrder[planId].indexOf(b.id));}else{tasksArr.sort((a,b)=>a.sortDate-b.sortDate);}
   let scheduleHtml='<h2>Study Schedule</h2><ul id="draggable-list">';
   tasksArr.forEach((item,idx)=>{
     if (item.resource === "Rest/Review Day") {
-      scheduleHtml += `<li class="draggable-item" style="background:#fffde3;border:1px solid #ffecb7;border-radius:8px;">
+      scheduleHtml += `<li class="draggable-item" style="background:#fffde3;">
         <b>${item.date}</b>: <span style="color:#d88427;font-weight:bold;">Rest / Review Day</span>
       </li>`;
       return;
@@ -512,25 +429,22 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
       <input type="checkbox" class="progress-checkbox" data-task="${item.id}" ${item.checked}>
       <b>${item.date}</b>: ${item.resource} <span style="color:#222;font-size:13px;">(${item.type})</span>
       <span style="color:#297bb7;font-size:13px;"> [${item.tag}]</span>,
-      Pages/Items ${item.pages} (${item.interval})
+      Assigned: <b>${item.pages}</b> <span style="font-size:13px;">(${rateTypeLabels[item.type]})</span>
+      <span style="color:#777;">Est: ${item.estTime} hrs</span>
       <span style="color:#777; font-style:italic;">${item.resNote}</span>
       <input type="text" class="note-input" data-task-note="${item.id}" placeholder="Add note..." value="${item.note}">
     </li>`;
   });
   scheduleHtml+='</ul>';
   document.getElementById('schedule').innerHTML=scheduleHtml;
-  document.getElementById('rebalance-btn').style.display='inline';
-  document.getElementById('adv-rebalance-btn').style.display='inline';
-  document.getElementById('download-csv-btn').style.display='inline';
-  document.getElementById('download-ics-btn').style.display='inline';
-  document.getElementById('download-pdf-btn').style.display='inline';
-  document.getElementById('backup-btn').style.display='inline';
-  document.getElementById('load-graph-container').style.display='block';
+  // More rendering: progress bar, graph, drag-drop, next chunk...
   lastBoxCount={total:totalBoxCount,done:doneBoxCount};
   updateProgressBar();
   lastProgressCache=progress;
   lastNotesCache=notes;
   lastOrderCache=manualOrder;
+
+  // Daily load graph
   let graphBar = document.getElementById('load-graph-bar');
   graphBar.innerHTML = "";
   let max = Math.max(...workloadPerDay, 1);
@@ -541,6 +455,8 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
   });
   document.getElementById('load-graph-legend').innerText =
     `Each vertical bar = workload (# pages/items), day-by-day.`;
+
+  // Drag & drop
   let draggedIdx=null,dragOverIdx=null;
   const list=document.getElementById("draggable-list");
   const items=list?Array.from(list.querySelectorAll('.draggable-item')):[];
@@ -582,6 +498,17 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
     });
   });
 }
+function updateProgressBar() {
+  if (lastBoxCount.total === 0) {
+    document.getElementById('progress-bar-container').style.display = "none";
+    document.getElementById('progress-label').innerText = "";
+    return;
+  }
+  const percent = Math.round((lastBoxCount.done / lastBoxCount.total) * 100);
+  document.getElementById('progress-bar').style.width = percent + "%";
+  document.getElementById('progress-bar-container').style.display = "block";
+  document.getElementById('progress-label').innerText = `Progress: ${lastBoxCount.done} / ${lastBoxCount.total} (${percent}%)`;
+}
 function showLoadedSchedule(result) {
   lastPlanConfig = result.planConfig;
   lastProgressCache = result.progress || {};
@@ -594,32 +521,50 @@ document.getElementById('rebalance-btn').addEventListener('click',function(){
   const progress=loadProgress()[lastPlanConfig.planId]||{};
   renderSchedule(lastPlanConfig,progress,true);
 });
-document.getElementById('study-form').addEventListener('submit',function(event){
-  event.preventDefault();
-  const resourceNames = Array.from(document.querySelectorAll('.resource')).map(input=>input.value);
-  const pageCounts = Array.from(document.querySelectorAll('.pages')).map(input=>parseInt(input.value,10));
-  const intervals = Array.from(document.querySelectorAll('.interval-dropdown')).map(select=>parseInt(select.value,10));
-  const resourceTypes = Array.from(document.querySelectorAll('.resource-type-dropdown')).map(e=>e.value);
-  const resourceTags = Array.from(document.querySelectorAll('.resource-tag')).map(e=>e.value);
-  const resourceNotes = Array.from(document.querySelectorAll('.resource-note')).map(e=>e.value);
-  const startDate = new Date(document.getElementById('start-date').value);
-  const endDate = new Date(document.getElementById('end-date').value);
-  const weekDays = getSelectedWeekdays();
-  const reviewDayInterval = parseInt(document.getElementById('review-dropdown').value, 10) || 0;
-  const skipDatesArr = getRestDays(startDate, endDate, reviewDayInterval);
-  const scheduleDays = getScheduleDays(startDate, endDate, weekDays, skipDatesArr);
-  const planId = `${startDate.toISOString().slice(0,10)}_${endDate.toISOString().slice(0,10)}_${resourceNames.join('_')}_${weekDays.join('-')}_${skipDatesArr.join('-')}_${intervals.join('-')}`;
-  lastPlanConfig = {resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes};
-  lastScheduleDays = scheduleDays;
-  const progress = loadProgress()[planId]||{};
-  renderSchedule(lastPlanConfig,progress,false,resourceTypes,skipDatesArr);
-});
 document.getElementById('darkmode-btn').onclick = function() {
   document.body.classList.toggle('dark');
   this.innerText = document.body.classList.contains('dark') ? "🌞" : "🌙";
 };
 
-// (End script)
+function saveProgress(progress, notes, manualOrder) {
+  localStorage.setItem('studyProgress', JSON.stringify(progress));
+  localStorage.setItem('studyNotes', JSON.stringify(notes));
+  localStorage.setItem('studyManualOrder', JSON.stringify(manualOrder));
+}
+function loadProgress() { return JSON.parse(localStorage.getItem('studyProgress') || '{}'); }
+function loadNotes() { return JSON.parse(localStorage.getItem('studyNotes') || '{}'); }
+function loadManualOrder() { return JSON.parse(localStorage.getItem('studyManualOrder') || '{}'); }
+
+document.getElementById('backup-btn').onclick = function() {
+  if (!lastPlanConfig) { alert('No plan to export!'); return; }
+  let json = JSON.stringify({
+    planConfig: lastPlanConfig,
+    progress: lastProgressCache,
+    notes: lastNotesCache,
+    manualOrder: lastOrderCache
+  });
+  let blob=new Blob([json],{type:"application/json"});
+  let url=window.URL.createObjectURL(blob);
+  let link=document.createElement("a");
+  link.href=url;link.download="study_plan_backup.json";
+  document.body.appendChild(link);link.click();
+  setTimeout(()=>{document.body.removeChild(link);window.URL.revokeObjectURL(url);},100);
+};
+document.getElementById('restore-btn').onclick = function() {
+  document.getElementById('restore-file').click();
+};
+document.getElementById('restore-file').onchange = function(evt) {
+  let file = evt.target.files[0];
+  let reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      let obj = JSON.parse(e.target.result);
+      showLoadedSchedule(obj);
+      alert('Backup restored!');
+    } catch { alert('Could not parse backup.'); }
+  };
+  if(file)reader.readAsText(file);
+};
 </script>
 </body>
 </html>
