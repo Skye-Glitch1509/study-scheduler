@@ -39,9 +39,6 @@
     body.dark #bulk-modal-inner {background: var(--dark-card);}
     .weekday-checkboxes label {font-weight:500;margin-right:13px;}
     #schedule, .draggable-item {font-size:1em;}
-    #progress-bar-container { width: 100%; max-width: 510px; height: 22px; border-radius: 17px;
-      overflow: hidden; background: var(--accent); margin-bottom:20px; margin-top: 21px;}
-    #progress-bar {border-radius:17px; background:var(--main);}
     .draggable-item { background: var(--card); box-shadow: var(--shadow); border-radius:9px; border: 1.4px solid var(--border); margin-bottom:9px;
       padding: 8px 16px; display: flex; align-items: center; transition: background .2s, box-shadow .15s;}
     body.dark .draggable-item {background:var(--dark-card); border-color:var(--dark-border);}
@@ -58,7 +55,6 @@
       body {margin:13px;}
       .card, #bulk-modal-inner {padding:8px;}
       #bulk-modal-inner {min-width:215px;}
-      #progress-bar-container {max-width:100%;}
     }
     #bulk-modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.16); z-index:1500;}
     #bulk-modal-inner { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
@@ -152,15 +148,12 @@
   </div>
 </form>
 <div>
-  <button type="button" id="download-csv-btn" style="display:none;">Export CSV</button>
-  <button type="button" id="download-ics-btn" style="display:none;">Export Calendar (.ics)</button>
-  <button type="button" id="download-pdf-btn" style="display:none;">Print/PDF</button>
+  <button type="button" id="download-csv-btn">Export CSV</button>
+  <button type="button" id="download-ics-btn">Export Calendar (.ics)</button>
+  <button type="button" id="download-pdf-btn">Print/PDF</button>
   <button type="button" id="backup-btn" style="display:none;">Backup JSON</button>
   <button type="button" id="restore-btn" style="display:inline;">Import JSON</button>
   <input type="file" id="restore-file" style="display:none;">
-</div>
-<div id="progress-bar-container" style="display:none;">
-  <div id="progress-bar"></div>
 </div>
 <div id="progress-label"></div>
 <button type="button" id="rebalance-btn" style="display:none;">Rebalance</button>
@@ -272,41 +265,6 @@ document.getElementById('bulk-add-btn').addEventListener('click', function() {
   document.getElementById('bulk-modal').style.display = 'block';
 });
 
-// ---------- Progress and Export/ICS filter mods START ----------
-
-let lastCheckedProgress = {};
-
-function getCurrentCheckedProgress(planId) {
-  // Loads the latest 'checked' state for schedule items.
-  // This matches localStorage for persistence
-  return (JSON.parse(localStorage.getItem('studyProgress') || '{}')[planId]) || {};
-}
-
-// Export helpers (ICS etc.)
-// Example: Implementation for ICS button (add your own export logic similarly elsewhere)
-document.getElementById('download-ics-btn').onclick = function() {
-  // Use lastPlanConfig and lastCheckedProgress to skip checked (done) items
-  if (!lastPlanConfig) { alert('No schedule to export!'); return; }
-  const planId = lastPlanConfig.planId;
-  const progress = getCurrentCheckedProgress(planId);
-  // Generate ICS format, skipping checked items
-  let schedule = [];
-  const scheduleDiv = document.getElementById('schedule');
-  const nodes = scheduleDiv.querySelectorAll('[data-tid]');
-  nodes.forEach(node => {
-    const tid = node.getAttribute('data-tid');
-    if (!(progress && progress[tid])) {
-      // Not completed, include for ICS export
-      // Here, add logic to push event info to the schedule
-      // Example: schedule.push({tid, ...event_data})
-    }
-  });
-  // TODO: Build and trigger ICS file download from 'schedule' array of remaining events
-  alert("ICS export will only include incomplete items. (Implement actual ICS download here.)");
-};
-
-// ---------- Progress and Export/ICS filter mods END ----------
-
 function getSelectedWeekdays() {
   return Array.from(document.querySelectorAll('.weekday')).filter(cb => cb.checked).map(cb => parseInt(cb.value));
 }
@@ -359,7 +317,6 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
   const numDays = scheduleDays.length;
   let remainingItems = pageCounts.slice();
   let doneItems = resourceNames.map((res, idx) => 0);
-  let totalBoxCount = 0, doneBoxCount = 0;
   let notes = loadNotes()[planId] || {};
   let manualOrder = loadManualOrder();
   let types = resourceTypesArg || resourceTypes || [];
@@ -388,7 +345,6 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
       let arr=daysIdxArrList[idx];
       if(arr.includes(i)){
         let undoneDays=arr.length-(rebalance?countDaysDone(progress,planId,resource,arr):0);
-        // Calculate maximum assignment for that resource by user rate and time
         let maxAssignable = Math.min(itemsTotal - doneItems[idx], Math.floor(ratePerHour[idx] * timeLeft));
         let assignCount = Math.ceil(itemsTotal/arr.length);
         if (assignCount > maxAssignable) assignCount = maxAssignable;
@@ -397,7 +353,6 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
         let timeNeeded = assignCount / ratePerHour[idx];
         timeUsedPerDay[i] += timeNeeded;
         timeLeft -= timeNeeded;
-        // Schedule this resource's assignment for today
         const taskId=`${planId}_${resource}_${i}`;
         const noteVal=notes[taskId]?notes[taskId]:'';
         const isChecked=progress[taskId]?"checked":"";
@@ -408,8 +363,6 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
           checked: isChecked, note: noteVal, resNote: resNotes[idx],
           estTime: timeNeeded.toFixed(2)
         });
-        totalBoxCount++;
-        if(progress[taskId])doneBoxCount++;
       }
     });
   }
@@ -434,25 +387,6 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
   });
   scheduleHtml+='</ul>';
   document.getElementById('schedule').innerHTML=scheduleHtml;
-  // Update progress immediately
-  lastBoxCount={total:totalBoxCount,done:doneBoxCount};
-  updateProgressBar();
-  lastProgressCache=progress;
-  lastNotesCache=notes;
-  lastOrderCache=manualOrder;
-  lastCheckedProgress=progress;
-
-  // Daily load graph
-  let graphBar = document.getElementById('load-graph-bar');
-  graphBar.innerHTML = "";
-  let max = Math.max(...workloadPerDay, 1);
-  workloadPerDay.forEach((val, idx) => {
-    let height = Math.round((val/max)*60)+5;
-    let day = scheduleDays[idx].toLocaleDateString();
-    graphBar.innerHTML += `<div title="${day}: ${val} items" style="height:${height}px"></div>`;
-  });
-  document.getElementById('load-graph-legend').innerText =
-    `Each vertical bar = workload (# pages/items), day-by-day.`;
 
   // Drag & drop
   let draggedIdx=null,dragOverIdx=null;
@@ -485,10 +419,6 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
       saveData[planConfig.planId]=saveData[planConfig.planId]||{};
       saveData[planConfig.planId][this.dataset.task]=this.checked?true:false;
       saveProgress(saveData,saveNotes,manualOrder);
-      // Get new progress data and update UI instantly
-      lastCheckedProgress = saveData[planConfig.planId] || {};
-      // Immediately update the progress bar!
-      // And re-render to reflect changes
       renderSchedule(planConfig,saveData[planConfig.planId],rebalance,types,skipArr);
     });
   });
@@ -501,32 +431,13 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
     });
   });
 }
-function updateProgressBar() {
-  if (lastBoxCount.total === 0) {
-    document.getElementById('progress-bar-container').style.display = "none";
-    document.getElementById('progress-label').innerText = "";
-    return;
-  }
-  const percent = Math.round((lastBoxCount.done / lastBoxCount.total) * 100);
-  document.getElementById('progress-bar').style.width = percent + "%";
-  document.getElementById('progress-bar-container').style.display = "block";
-  document.getElementById('progress-label').innerText = `Progress: ${lastBoxCount.done} / ${lastBoxCount.total} (${percent}%)`;
-}
-function showLoadedSchedule(result) {
-  lastPlanConfig = result.planConfig;
-  lastProgressCache = result.progress || {};
-  lastNotesCache = result.notes || {};
-  lastOrderCache = result.manualOrder || {};
-  renderSchedule(lastPlanConfig, lastProgressCache, false);
-}
-document.getElementById('rebalance-btn').addEventListener('click',function(){
-  if(!lastPlanConfig)return;
-  const progress=loadProgress()[lastPlanConfig.planId]||{};
-  renderSchedule(lastPlanConfig,progress,true);
-});
-document.getElementById('darkmode-btn').onclick = function() {
-  document.body.classList.toggle('dark');
-  this.innerText = document.body.classList.contains('dark') ? "🌞" : "🌙";
+
+// You may need to implement ICS and PDF export logic using libraries like ics.js and jsPDF
+document.getElementById('download-ics-btn').onclick = function() {
+  alert("ICS export will only include incomplete items. (Implement actual ICS download here.)");
+};
+document.getElementById('download-pdf-btn').onclick = function() {
+  window.print();
 };
 
 function saveProgress(progress, notes, manualOrder) {
