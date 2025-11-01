@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css?family=Inter:400,500,700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', Arial, sans-serif; background: #f7fafc; color: #232c40; margin:0; }
+    body { font-family: 'Inter', Arial, sans-serif; background: #f7fafc; color:#232c40; margin:0; }
     .container { max-width:740px; margin:30px auto 36px; background:#fff; border-radius:18px; box-shadow:0 2px 12px #23262f15; padding:24px 28px;}
     h1 { margin-top:0; font-size:2em; font-weight:700; color:#2562cf;}
     .card-row { display:flex; flex-wrap:wrap; gap:15px; align-items:center; margin-bottom:18px;}
@@ -249,7 +249,6 @@ function addResourceRow(resourceVal = "", typeVal = "video", totalVal = "", rate
 setupResourceAutofill(document.querySelector('.resource-row'));
 document.getElementById('add-resource-btn').addEventListener('click', function () { addResourceRow(); });
 
-// Form scheduling logic
 document.getElementById('study-form').addEventListener('submit', function (e) {
   e.preventDefault();
   const startDate = document.getElementById('start-date').value;
@@ -274,7 +273,6 @@ document.getElementById('study-form').addEventListener('submit', function (e) {
     if (!name || (!noTotal && !total)) return;
     plan.push({ name, type, total, rate, note, tag, priority, interval, noTotal });
   });
-  // Build schedule: assign each resource's items to study days in order
   let days = [];
   for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
     days.push(new Date(dt));
@@ -382,31 +380,34 @@ document.getElementById('restore-file').onchange = function(evt){
   reader.readAsText(file);
 };
 
-// Google Calendar export (.ics)
+// Google Calendar export (.ics)—All-day compatible!
 document.getElementById('export-gcal-btn').onclick = function() {
   const schedule = window._schedule || [];
   if (!schedule.length) return showToast("No schedule to export!", "#bc2d2d");
   let ics = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:FMGE-NEETPG-SCHEDULER"
+    "PRODID:-//FMGE-NEETPG-SCHEDULER//EN"
   ];
   schedule.forEach((task, i) => {
-    let dtstamp = new Date().toISOString().replace(/[-:]/g,"").split(".")[0] + "Z";
-    let dtstart = task.date.replace(/-/g,"") + "T090000";
-    let uid = "fmgeschdlr-" + task.date + "-" + i;
+    // All-day event: YYYYMMDD format, DTEND is next day
+    let dtstart = task.date.replace(/-/g, "");
+    let dtendObj = new Date(task.date);
+    dtendObj.setDate(dtendObj.getDate() + 1);
+    let dtend = dtendObj.toISOString().slice(0,10).replace(/-/g, "");
+    let uid = `fmgeschdlr-${task.date}-${i}`;
     let title = `${task.resource} [${task.assign} items]`;
-    let desc = `Type: ${task.type}\nPriority: ${task.priority}\nTag: ${task.tag}\nNote: ${task.note}`;
+    let desc = `Type: ${task.type}, Priority: ${task.priority}, Tag: ${task.tag}, Note: ${task.note || ""}`;
     ics.push("BEGIN:VEVENT");
     ics.push("UID:" + uid);
-    ics.push("DTSTAMP:" + dtstamp);
-    ics.push("DTSTART;TZID=Asia/Kolkata:" + dtstart);
-    ics.push("SUMMARY:" + title);
-    ics.push("DESCRIPTION:" + desc);
+    ics.push("DTSTART;VALUE=DATE:" + dtstart);
+    ics.push("DTEND;VALUE=DATE:" + dtend);
+    ics.push("SUMMARY:" + title.replace(/[\r\n]+/g," "));
+    ics.push("DESCRIPTION:" + desc.replace(/[\r\n]+/g," "));
     ics.push("END:VEVENT");
   });
   ics.push("END:VCALENDAR");
-  let blob = new Blob([ics.join("\r\n")], {type:"text/calendar"});
+  let blob = new Blob([ics.join("\r\n")], {type:"text/calendar;charset=utf-8"});
   let url = window.URL.createObjectURL(blob);
   let a = document.createElement("a");
   a.href = url; a.download = "study_schedule.ics";
@@ -414,7 +415,6 @@ document.getElementById('export-gcal-btn').onclick = function() {
   setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); },100);
   showToast("Calendar file exported!");
 };
-
 </script>
 </body>
 </html>
