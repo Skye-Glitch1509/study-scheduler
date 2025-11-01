@@ -8,8 +8,7 @@
     ul { list-style-type: none; padding-left: 0; }
     li { margin-bottom: 7px; }
     .progress-checkbox { margin-right: 8px; cursor:pointer;}
-    #add-resource-btn, #rebalance-btn, #download-csv-btn, #download-ics-btn, #cloud-save-btn, #cloud-load-btn, #create-new-btn { margin-top: 8px; margin-bottom: 10px; }
-    #plan-id-display {margin-top: 10px; font-size: 15px; color: #444; background: #f6f6f6; border-radius: 8px; padding: 10px;}
+    #add-resource-btn, #rebalance-btn, #download-csv-btn, #download-ics-btn { margin-top: 8px; margin-bottom: 10px; }
     #progress-bar-container {
       width: 100%; max-width: 500px; height: 24px;
       background: #eee; border-radius: 12px; overflow: hidden; margin-bottom:20px; margin-top: 24px;
@@ -52,10 +51,7 @@
   </style>
 </head>
 <body>
-  <button type="button" id="cloud-load-btn" style="display:inline;">Load plan from cloud</button>
-  <button type="button" id="create-new-btn" style="display:none;">Create new schedule instead</button>
   <h1>Study Scheduler</h1>
-  <div id="plan-id-display" style="display:none"></div>
   <form id="study-form" style="display:block;">
     <div id="resource-list">
       <div class="resource-row">
@@ -100,7 +96,6 @@
     <label>End Date: <input type="date" id="end-date" required></label><br>
     <button type="submit">Create Schedule</button>
   </form>
-  <button type="button" id="cloud-save-btn" style="display:none;">Save plan to cloud</button>
   <button type="button" id="download-csv-btn" style="display:none;">Download CSV</button>
   <button type="button" id="download-ics-btn" style="display:none;">Download Calendar (.ics)</button>
   <div id="progress-bar-container" style="display:none;">
@@ -110,38 +105,7 @@
   <button type="button" id="rebalance-btn" style="display:none;">Rebalance Schedule</button>
   <div id="schedule"></div>
 <script>
-var CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbyw3nDaDxpHi14sT7IwRwxUxQ6S2SDt9N7zXftwdt7l51Pfe6yiRg-YrpnjuLaS_12J2w/exec";
-var USER_ID = "default";
-
-// All JS logic (unchanged otherwise)
-function cloudSave(planConfig, progress, notes, manualOrder) {
-  var payload = {
-    id: planConfig.planId,
-    user: USER_ID,
-    savedPlan: JSON.stringify({
-      planConfig, progress, notes, manualOrder
-    })
-  };
-  fetch(CLOUD_API_URL, {
-    method: "POST",
-    body: JSON.stringify(payload)
-  }).then(res => res.json()).then(data => {
-    alert("Saved to cloud!");
-  }).catch(err => {
-    alert("Cloud save failed!");
-  });
-}
-function cloudLoad(planId, callback) {
-  fetch(CLOUD_API_URL + "?action=load&planid=" + encodeURIComponent(planId))
-    .then(res => res.text())
-    .then(text => {
-      let data;
-      try {data = JSON.parse(text);} catch(e){data={};}
-      callback(data);
-    }).catch(err=>{
-      alert("Cloud load failed!");
-    });
-}
+// --- Utility functions for saving/loading local progress/notes/order ---
 function saveProgress(progress, notes, manualOrder) {
   localStorage.setItem('studyProgress', JSON.stringify(progress));
   localStorage.setItem('studyNotes', JSON.stringify(notes));
@@ -150,7 +114,9 @@ function saveProgress(progress, notes, manualOrder) {
 function loadProgress() { return JSON.parse(localStorage.getItem('studyProgress') || '{}'); }
 function loadNotes() { return JSON.parse(localStorage.getItem('studyNotes') || '{}'); }
 function loadManualOrder() { return JSON.parse(localStorage.getItem('studyManualOrder') || '{}'); }
-let lastPlanConfig = null, lastBoxCount = { total: 0, done: 0 }, lastScheduleDays = [], lastProgressCache = {}, lastNotesCache = {}, lastOrderCache = {};
+
+let lastPlanConfig = null, lastBoxCount = { total: 0, done: 0 }, lastScheduleDays = [],
+    lastProgressCache = {}, lastNotesCache = {}, lastOrderCache = {};
 
 document.getElementById('add-resource-btn').addEventListener('click', function() {
   const resourceList = document.getElementById('resource-list');
@@ -181,6 +147,7 @@ document.querySelectorAll('.remove-holiday-btn').forEach(btn =>
     e.target.closest('.holiday-input-row').remove();
   })
 );
+
 function countDaysDone(progress, planId, resource, daysIdxArr) {
   return Object.keys(progress)
     .filter(k => {
@@ -208,7 +175,8 @@ function getScheduleDays(startDate, endDate, weekDays, skipDates) {
     dt.setDate(dt.getDate() + 1); }
   return days;
 }
-// --- Calendar download ---
+
+// --- Calendar export ---
 function pad(n){return n<10?"0"+n:n;}
 function datetoCal(dt) {
   return [dt.getUTCFullYear(),pad(dt.getUTCMonth()+1),pad(dt.getUTCDate())].join('');
@@ -272,7 +240,7 @@ function downloadICS(planConfig, notes, manualOrder) {
   document.body.appendChild(link);link.click();
   setTimeout(()=>{document.body.removeChild(link);window.URL.revokeObjectURL(url);},100);
 }
-// --- CSV download ---
+// --- CSV export ---
 function downloadCSV(planConfig, progress, notes, manualOrder) {
   if (!planConfig) return;
   const { resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays } = planConfig;
@@ -319,33 +287,6 @@ function downloadCSV(planConfig, progress, notes, manualOrder) {
   setTimeout(()=>{document.body.removeChild(link);window.URL.revokeObjectURL(url);},100);
 }
 
-// Main event handler for plan load (prompt always)
-document.getElementById('cloud-load-btn').addEventListener('click', function() {
-  let defaultId = localStorage.getItem("lastPlanId") || "";
-  let planId = prompt("Enter plan ID to load from cloud:", defaultId);
-  if (!planId) return;
-  cloudLoad(planId, function(result) {
-    if (result && result.planConfig) {
-      showLoadedSchedule(result);
-      localStorage.setItem("lastPlanId", planId);
-      document.getElementById('plan-id-display').innerText = 'Current Plan ID: ' + planId;
-      document.getElementById('plan-id-display').style.display = 'block';
-    } else {
-      alert("No cloud plan found for this ID!");
-    }
-  });
-});
-
-document.getElementById('create-new-btn').addEventListener('click', function() {
-  document.getElementById('schedule').innerHTML = '';
-  document.getElementById('study-form').style.display = 'block';
-  document.getElementById('create-new-btn').style.display = 'none';
-  document.getElementById('plan-id-display').style.display = 'none';
-});
-
-document.getElementById('cloud-save-btn').addEventListener('click', function() {
-  cloudSave(lastPlanConfig, lastProgressCache, lastNotesCache, lastOrderCache);
-});
 document.getElementById('download-csv-btn').addEventListener('click',function(){
   downloadCSV(lastPlanConfig,lastProgressCache,lastNotesCache,lastOrderCache);
 });
@@ -372,18 +313,8 @@ document.getElementById('study-form').addEventListener('submit',function(event){
   lastPlanConfig={resourceNames,pageCounts,intervals,startDate,endDate,planId,scheduleDays};
   lastScheduleDays=scheduleDays;
   const progress=loadProgress()[planId]||{};
-  localStorage.setItem("lastPlanId", planId);
-  document.getElementById('plan-id-display').innerText = 'Current Plan ID: ' + planId;
-  document.getElementById('plan-id-display').style.display = 'block';
   renderSchedule(lastPlanConfig,progress,false);
 });
-
-function showLoadedSchedule(result) {
-  document.getElementById('study-form').style.display = 'none';
-  document.getElementById('schedule').innerHTML = '';
-  renderSchedule(result.planConfig, result.progress || {}, false);
-  document.getElementById('create-new-btn').style.display = 'inline';
-}
 
 function renderSchedule(planConfig, progress, rebalance = false) {
   const { resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays } = planConfig;
@@ -442,7 +373,6 @@ function renderSchedule(planConfig, progress, rebalance = false) {
   document.getElementById('rebalance-btn').style.display='inline';
   document.getElementById('download-csv-btn').style.display='inline';
   document.getElementById('download-ics-btn').style.display='inline';
-  document.getElementById('cloud-save-btn').style.display='inline';
   lastBoxCount={total:totalBoxCount,done:doneBoxCount};
   updateProgressBar();
   lastProgressCache=progress;
@@ -485,7 +415,7 @@ function renderSchedule(planConfig, progress, rebalance = false) {
       let saveData=loadProgress();let saveNotes=loadNotes();let manualOrder=loadManualOrder();
       saveNotes[planConfig.planId]=saveNotes[planConfig.planId]||{};
       saveNotes[planConfig.planId][this.dataset.taskNote]=this.value;
-      saveProgress(saveData,saveNotes(),manualOrder);
+      saveProgress(saveData,saveNotes,manualOrder);
     });
   });
 }
