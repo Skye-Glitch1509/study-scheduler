@@ -271,7 +271,42 @@ document.getElementById('bulk-add-btn').addEventListener('click', function() {
   document.getElementById('bulk-resource-input').value = '';
   document.getElementById('bulk-modal').style.display = 'block';
 });
-// Continue with logic (see next chunk)
+
+// ---------- Progress and Export/ICS filter mods START ----------
+
+let lastCheckedProgress = {};
+
+function getCurrentCheckedProgress(planId) {
+  // Loads the latest 'checked' state for schedule items.
+  // This matches localStorage for persistence
+  return (JSON.parse(localStorage.getItem('studyProgress') || '{}')[planId]) || {};
+}
+
+// Export helpers (ICS etc.)
+// Example: Implementation for ICS button (add your own export logic similarly elsewhere)
+document.getElementById('download-ics-btn').onclick = function() {
+  // Use lastPlanConfig and lastCheckedProgress to skip checked (done) items
+  if (!lastPlanConfig) { alert('No schedule to export!'); return; }
+  const planId = lastPlanConfig.planId;
+  const progress = getCurrentCheckedProgress(planId);
+  // Generate ICS format, skipping checked items
+  let schedule = [];
+  const scheduleDiv = document.getElementById('schedule');
+  const nodes = scheduleDiv.querySelectorAll('[data-tid]');
+  nodes.forEach(node => {
+    const tid = node.getAttribute('data-tid');
+    if (!(progress && progress[tid])) {
+      // Not completed, include for ICS export
+      // Here, add logic to push event info to the schedule
+      // Example: schedule.push({tid, ...event_data})
+    }
+  });
+  // TODO: Build and trigger ICS file download from 'schedule' array of remaining events
+  alert("ICS export will only include incomplete items. (Implement actual ICS download here.)");
+};
+
+// ---------- Progress and Export/ICS filter mods END ----------
+
 function getSelectedWeekdays() {
   return Array.from(document.querySelectorAll('.weekday')).filter(cb => cb.checked).map(cb => parseInt(cb.value));
 }
@@ -293,6 +328,7 @@ function getScheduleDays(startDate, endDate, weekDays, skipDatesArr) {
     dt.setDate(dt.getDate() + 1); }
   return days;
 }
+
 document.getElementById('study-form').addEventListener('submit',function(event){
   event.preventDefault();
   const resourceNames = Array.from(document.querySelectorAll('.resource')).map(input=>input.value);
@@ -317,6 +353,7 @@ document.getElementById('study-form').addEventListener('submit',function(event){
   const progress = loadProgress()[planId]||{};
   renderSchedule(lastPlanConfig,progress,false,resourceTypes,skipDatesArr);
 });
+
 function renderSchedule(planConfig, progress, rebalance = false, resourceTypesArg=null, skipDatesArr=null) {
   const { resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes, ratePerHour, studyHoursPerDay } = planConfig;
   const numDays = scheduleDays.length;
@@ -363,14 +400,16 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
         // Schedule this resource's assignment for today
         const taskId=`${planId}_${resource}_${i}`;
         const noteVal=notes[taskId]?notes[taskId]:'';
+        const isChecked=progress[taskId]?"checked":"";
         tasksArr.push({
           date: day.toLocaleDateString(), sortDate: day.getTime(),
           resource: `${resourceTypeIcons[types[idx]]} ${resource}`, type: resourceTypeLabels[types[idx]], tag:tags[idx],
           pages: assignCount, interval:intervals[idx], id:taskId,
-          checked: progress[taskId]?"checked":"", note: noteVal, resNote: resNotes[idx],
+          checked: isChecked, note: noteVal, resNote: resNotes[idx],
           estTime: timeNeeded.toFixed(2)
         });
-        totalBoxCount++;if(progress[taskId])doneBoxCount++;
+        totalBoxCount++;
+        if(progress[taskId])doneBoxCount++;
       }
     });
   }
@@ -395,12 +434,13 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
   });
   scheduleHtml+='</ul>';
   document.getElementById('schedule').innerHTML=scheduleHtml;
-  // More rendering: progress bar, graph, drag-drop, next chunk...
+  // Update progress immediately
   lastBoxCount={total:totalBoxCount,done:doneBoxCount};
   updateProgressBar();
   lastProgressCache=progress;
   lastNotesCache=notes;
   lastOrderCache=manualOrder;
+  lastCheckedProgress=progress;
 
   // Daily load graph
   let graphBar = document.getElementById('load-graph-bar');
@@ -438,12 +478,17 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
     });
     item.addEventListener("dragleave",(e)=>{item.classList.remove("drop-target");});
   });
+
   document.querySelectorAll('.progress-checkbox').forEach(cb=>{
     cb.addEventListener('change',function(){
       let saveData=loadProgress();let saveNotes=loadNotes();let manualOrder=loadManualOrder();
       saveData[planConfig.planId]=saveData[planConfig.planId]||{};
       saveData[planConfig.planId][this.dataset.task]=this.checked?true:false;
       saveProgress(saveData,saveNotes,manualOrder);
+      // Get new progress data and update UI instantly
+      lastCheckedProgress = saveData[planConfig.planId] || {};
+      // Immediately update the progress bar!
+      // And re-render to reflect changes
       renderSchedule(planConfig,saveData[planConfig.planId],rebalance,types,skipArr);
     });
   });
