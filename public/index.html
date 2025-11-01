@@ -27,6 +27,7 @@
     #toast-notify.show { opacity:1;top:70px;pointer-events:auto;}
     @media(max-width:700px){.container{max-width:99vw;padding:10px 2vw;}.card-row,.resource-row,.btn-row{flex-direction:column;align-items:stretch;gap:8px;}}
     .disabled-input { background:#e5eaf1 !important; color:#999 !important;}
+    .goal-label { font-weight:500; color:#228c3b; }
   </style>
 </head>
 <body>
@@ -111,6 +112,9 @@
         </label>
         <label>
           Rate/hr: <input type="number" class="rate-per-hour" min="1" value="10" style="width:55px;">
+        </label>
+        <label class="goal-label">
+          Daily Goal: <input type="number" class="daily-goal" min="1" value="10" style="width:63px;">
         </label>
         <label>
           <input type="checkbox" class="no-total-checkbox">
@@ -209,7 +213,7 @@ function setupResourceAutofill(row) {
     if (resourceLibrary.hasOwnProperty(val)) {
       const meta = resourceLibrary[val];
       typeSel.value = meta.type;
-      typeSel.disabled = false; // <-- fix: allow user to change type
+      typeSel.disabled = false;
       if (meta.total) {
         totalBox.value = meta.total;
         totalBox.readOnly = true;
@@ -249,15 +253,16 @@ function setupResourceAutofill(row) {
     }
   }
   noTotalChk.addEventListener('change', handleNoTotalChange);
-  handleNoTotalChange(); // initial state
+  handleNoTotalChange();
 }
-function addResourceRow(resourceVal = "", typeVal = "video", totalVal = "", rateVal = "10") {
+function addResourceRow(resourceVal = "", typeVal = "video", totalVal = "", rateVal = "10", goalVal = "10") {
   const resourceList = document.getElementById('resource-list');
   const newRow = resourceList.firstElementChild.cloneNode(true);
   newRow.querySelector('.resource-search').value = resourceVal;
   newRow.querySelector('.resource-type-dropdown').value = typeVal;
   newRow.querySelector('.pages').value = totalVal;
   newRow.querySelector('.rate-per-hour').value = rateVal;
+  newRow.querySelector('.daily-goal').value = goalVal;
   setupResourceAutofill(newRow);
   const removeBtn = newRow.querySelector('.remove-btn');
   removeBtn.style.display = 'inline';
@@ -267,7 +272,7 @@ function addResourceRow(resourceVal = "", typeVal = "video", totalVal = "", rate
 setupResourceAutofill(document.querySelector('.resource-row'));
 document.getElementById('add-resource-btn').addEventListener('click', function () { addResourceRow(); });
 
-// FINAL SCHEDULER LOGIC: daily hours split equally among all resources scheduled that day
+// PRIORITY-BASED SCHEDULER LOGIC WITH DAILY GOAL
 document.getElementById('study-form').addEventListener('submit', function (e) {
   e.preventDefault();
   const startDate = document.getElementById('start-date').value;
@@ -283,15 +288,19 @@ document.getElementById('study-form').addEventListener('submit', function (e) {
     let type = row.querySelector('.resource-type-dropdown').value;
     let total = +row.querySelector('.pages').value || 0;
     let rate = +row.querySelector('.rate-per-hour').value;
+    let dailyGoal = +row.querySelector('.daily-goal').value || 0;
     let note = row.querySelector('.resource-note').value.trim();
     let tag = row.querySelector('.resource-tag').value.trim();
     let priority = row.querySelector('.priority-dropdown').value;
     let interval = +row.querySelector('.interval-dropdown').value;
     let noTotal = row.querySelector('.no-total-checkbox').checked;
     if (!name) return;
-    if (!noTotal && !total) return; // require total unless noTotal
-    plan.push({ name, type, total, rate, note, tag, priority, interval, noTotal, assigned: 0 });
+    if (!noTotal && !total) return;
+    plan.push({ name, type, total, rate, dailyGoal, note, tag, priority, interval, noTotal, assigned: 0 });
   });
+  // Sort plan by priority: High > Medium > Low
+  const prioOrder = { high: 1, medium: 2, low: 3 };
+  plan.sort((a, b) => prioOrder[a.priority] - prioOrder[b.priority]);
   let days = [];
   for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
     days.push(new Date(dt));
@@ -299,34 +308,43 @@ document.getElementById('study-form').addEventListener('submit', function (e) {
   let schedule = [];
   for (let d = 0; d < days.length; d++) {
     let day = new Date(days[d]);
-    // Find resources scheduled today
-    let todays = plan.filter(resource => (d % resource.interval) === 0 && (resource.noTotal || resource.total > resource.assigned));
-    let nResources = todays.length;
-    if (nResources === 0) continue;
-    let hoursPerResource = hoursPerDay / nResources;
-    todays.forEach(resource => {
-      let assign = resource.noTotal
-        ? Math.round(hoursPerResource * resource.rate)
-        : Math.min(Math.round(hoursPerResource * resource.rate), resource.total - resource.assigned);
-      if (assign <= 0) return;
-      schedule.push({
-        resource: resource.name,
-        type: resource.type,
-        tag: resource.tag,
-        note: resource.note,
-        priority: resource.priority,
-        date: day.toISOString().slice(0,10),
-        assign,
-        index: 1
-      });
-      if (!resource.noTotal) {
-        resource.assigned += assign;
+    let timeLeft = hoursPerDay;
+    // For each priority level, schedule as much as possible up to dailyGoal (by interval)
+    for (let prio of ["high", "medium", "low"]) {
+      let todays = plan.filter(resource =>
+        resource.priority === prio &&
+        (d % resource.interval) === 0 &&
+        (resource.noTotal || resource.total > resource.assigned)
+      );
+      // For each resource, assign up to its dailyGoal
+      for (let resource of todays) {
+        if (timeLeft <= 0) break;
+        let possibleByRate = timeLeft * resource.rate;
+        let possible = resource.noTotal
+          ? Math.min(resource.dailyGoal, possibleByRate)
+          : Math.min(resource.dailyGoal, possibleByRate, resource.total - resource.assigned);
+        possible = Math.max(0, Math.floor(possible));
+        if (possible > 0) {
+          schedule.push({
+            resource: resource.name,
+            type: resource.type,
+            tag: resource.tag,
+            note: resource.note,
+            priority: resource.priority,
+            date: day.toISOString().slice(0,10),
+            assign: possible,
+            index: 1
+          });
+          timeLeft -= possible / resource.rate;
+          if (!resource.noTotal) resource.assigned += possible;
+        }
       }
-    });
+      if (timeLeft <= 0) break; // once out of time, stop for the day
+    }
   }
   window._schedule = schedule;
   renderSchedule(schedule);
-  showToast('Schedule created!', "#26994a");
+  showToast('Schedule created! Priority & daily goals enforced.', "#26994a");
 });
 
 function renderSchedule(schedule) {
