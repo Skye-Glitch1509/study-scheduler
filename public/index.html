@@ -38,6 +38,8 @@
     .priority-label.medium { color:#fabf3a;}
     .priority-label.low { color:#7ed957;}
     .draggable-item .del-btn { position:absolute;right:15px;top:15px;color:#bc2d2d;background:none;border:none;cursor:pointer;font-size:1.3em;z-index:2;}
+    .no-total-checkbox {margin-left: 4px;}
+    .no-total-label {margin-left: 8px; font-size: 0.98em; color: #2562cf;}
     @media (max-width:900px){.card-row{flex-direction:column;align-items:stretch;gap:7px;}.app-header{flex-direction:column;gap:8px;}}
     @media (max-width:500px){.card{border-radius:8px;padding:8px 6px 5px 6px;}.draggable-item{padding:6px;}label,.priority-label{font-size:.97em;}h1{font-size:1.2em;}.app-header{padding-left:3px;}button,input[type="button"]{padding:12px 6px;}}
     @media print { body > *:not(#schedule) { display: none !important; } #schedule { display: block !important; margin: 0 !important; } #schedule ul { margin: 0 !important; } #schedule h2 { margin-top: 0 !important; } }
@@ -64,7 +66,9 @@
         <div id="resource-list">
           <div class="card card-row resource-row">
             <label>Resource: <input type="text" class="resource" required></label>
-            <label class="resource-pages-label">Pages: <input type="number" class="pages" required style="width:70px;"></label>
+            <label class="resource-pages-label">
+              Pages: <input type="number" class="pages" required style="width:70px;">
+            </label>
             <label>Type:
               <select class="resource-type-dropdown">
                 <option value="book">📚 Book</option>
@@ -77,6 +81,10 @@
             <label>
               Rate per hour: <input type="number" class="rate-per-hour" min="1" value="10" style="width:70px;">
               <span class="rate-type-label">pages/hr</span>
+            </label>
+            <label>
+              <input type="checkbox" class="no-total-checkbox">
+              <span class="no-total-label">No total/end (repeat rate every eligible day)</span>
             </label>
             <label>
               Priority:
@@ -162,7 +170,6 @@
   </main>
 </div>
 <script>
-/* Dark mode and tab navigation logic */
 const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 function autoSetDarkMode() {
   const useDark = darkModeQuery.matches || localStorage.getItem('darkOverride') === '1';
@@ -188,7 +195,6 @@ document.getElementById('nav-calendar').onclick=()=>{showPanel('calendar');rende
 document.getElementById('nav-gantt').onclick=()=>{showPanel('gantt');renderAllViews();};
 document.getElementById('nav-analytics').onclick=()=>{showPanel('chart');renderAnalyticsChart();};
 
-/* --- Scheduler Data and Utility Functions --- */
 const resourceTypeIcons = {book:"📚", qbank:"❓", flashcards:"🃏", video:"📺", other:"📄"};
 const resourceTypeLabels = {book:"Book",qbank:"QBank",flashcards:"Flashcards",video:"Video",other:"Other"};
 const rateTypeLabels = {book:"pages/hr",qbank:"questions/hr",flashcards:"cards/hr",video:"videos/hr",other:"items/hr"};
@@ -199,6 +205,19 @@ function updateRateTypeLabels() {
     const typeSel = row.querySelector('.resource-type-dropdown');
     const rateLabel = row.querySelector('.rate-type-label');
     const pagesLabel = row.querySelector('.resource-pages-label');
+    const noTotal = row.querySelector('.no-total-checkbox');
+    function disablePagesInput(disabled) {
+      row.querySelector('.pages').disabled = !!disabled;
+      if (disabled) {
+        row.querySelector('.pages').value = '';
+      }
+    }
+    if (noTotal) {
+      noTotal.onchange = function() {
+        disablePagesInput(noTotal.checked);
+      };
+      disablePagesInput(noTotal.checked);
+    }
     if (typeSel && rateLabel) rateLabel.textContent = rateTypeLabels[typeSel.value] || "items/hr";
     if (typeSel && pagesLabel) pagesLabel.childNodes[0].textContent = pagesLabels[typeSel.value] || "Items: ";
     typeSel.addEventListener('change', function() {
@@ -207,7 +226,7 @@ function updateRateTypeLabels() {
     });
   });
 }
-function addResourceRow(resourceVal="", pagesVal="", typeVal="book", tagVal="", noteVal="", intervalVal="1", rateVal="10", priorityVal="medium") {
+function addResourceRow(resourceVal="", pagesVal="", typeVal="book", tagVal="", noteVal="", intervalVal="1", rateVal="10", priorityVal="medium", noTotal=false) {
   const resourceList = document.getElementById('resource-list');
   const newRow = resourceList.firstElementChild.cloneNode(true);
   newRow.querySelector('.resource').value = resourceVal || "";
@@ -218,6 +237,7 @@ function addResourceRow(resourceVal="", pagesVal="", typeVal="book", tagVal="", 
   newRow.querySelector('.interval-dropdown').value = intervalVal;
   newRow.querySelector('.rate-per-hour').value = rateVal || 10;
   newRow.querySelector('.priority-dropdown').value = priorityVal;
+  newRow.querySelector('.no-total-checkbox').checked = noTotal;
   updateRateTypeLabels();
   const removeBtn = newRow.querySelector('.remove-btn');
   removeBtn.style.display = 'inline';
@@ -263,7 +283,9 @@ function getScheduleDays(startDate, endDate, weekDays, skipDatesArr) {
 document.getElementById('study-form').addEventListener('submit',function(event){
   event.preventDefault();
   const resourceNames = Array.from(document.querySelectorAll('.resource')).map(input=>input.value);
-  const pageCounts = Array.from(document.querySelectorAll('.pages')).map(input=>parseInt(input.value,10));
+  const pageCountsRaw = Array.from(document.querySelectorAll('.pages')).map(input=>input.value);
+  const noTotalArr = Array.from(document.querySelectorAll('.no-total-checkbox')).map(cb=>cb.checked);
+  const pageCounts = pageCountsRaw.map((v, idx) => noTotalArr[idx] ? null : parseInt(v, 10));
   const intervals = Array.from(document.querySelectorAll('.interval-dropdown')).map(select=>parseInt(select.value,10));
   const resourceTypes = Array.from(document.querySelectorAll('.resource-type-dropdown')).map(e=>e.value);
   const resourceTags = Array.from(document.querySelectorAll('.resource-tag')).map(e=>e.value);
@@ -278,7 +300,12 @@ document.getElementById('study-form').addEventListener('submit',function(event){
   const skipDatesArr = getRestDays(startDate, endDate, reviewDayInterval);
   const scheduleDays = getScheduleDays(startDate, endDate, weekDays, skipDatesArr);
   const planId = `${startDate.toISOString().slice(0,10)}_${endDate.toISOString().slice(0,10)}_${resourceNames.join('_')}_${weekDays.join('-')}_${skipDatesArr.join('-')}_${intervals.join('-')}`;
-  window.lastPlanConfig = {resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes, ratePerHour, priorities, studyHoursPerDay};
+  window.lastPlanConfig = {
+    resourceNames, pageCounts, pageCountsRaw, noTotalArr,
+    intervals, startDate, endDate, planId, scheduleDays,
+    resourceTypes, resourceTags, resourceNotes, ratePerHour,
+    priorities, studyHoursPerDay
+  };
   window.lastScheduleDays = scheduleDays;
   const progress = loadProgress()[planId]||{};
   renderSchedule(window.lastPlanConfig,progress,false,resourceTypes,skipDatesArr);
@@ -286,7 +313,12 @@ document.getElementById('study-form').addEventListener('submit',function(event){
 });
 
 function renderSchedule(planConfig, progress, rebalance = false, resourceTypesArg=null, skipDatesArr=null) {
-  const { resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes, ratePerHour, priorities, studyHoursPerDay } = planConfig;
+  const {
+    resourceNames, pageCounts, noTotalArr, intervals,
+    startDate, endDate, planId, scheduleDays,
+    resourceTypes, resourceTags, resourceNotes, ratePerHour,
+    priorities, studyHoursPerDay
+  } = planConfig;
   const numDays = scheduleDays.length;
   let notes = loadNotes()[planId] || {};
   let types = resourceTypesArg || resourceTypes || [];
@@ -294,9 +326,13 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
   let resNotes = resourceNotes || Array(resourceNames.length).fill("");
   let prios = priorities || Array(resourceNames.length).fill("medium");
   let skipArr = skipDatesArr || getSkipDates();
-  let daysIdxArrList = resourceNames.map((r, idx)=>{let arr=[];for(let i=0;i<numDays;i+=intervals[idx])arr.push(i);return arr;});
+  let daysIdxArrList = resourceNames.map((r, idx)=>
+    noTotalArr[idx] ? Array(numDays).fill(0).map((_,i)=>i)
+      : (()=>{let arr=[];for(let i=0;i<numDays;i+=intervals[idx])arr.push(i);return arr;})()
+  );
   let tasksArr = [];
   let reviewRestMap = {}; skipArr.forEach(dateStr => reviewRestMap[dateStr]=true);
+
   for(let i=0;i<numDays;i++){
     const day = scheduleDays[i];
     const dStr = day.toISOString().slice(0,10);
@@ -312,7 +348,9 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
     resourceNames.forEach((resource,idx)=>{
       let arr=daysIdxArrList[idx];
       if(arr.includes(i)){
-        let assignCount = Math.ceil(pageCounts[idx]/arr.length);
+        let assignCount = noTotalArr[idx]
+          ? ratePerHour[idx] // for infinite resources: assign the rate per day (the user input)
+          : Math.ceil(pageCounts[idx]/arr.length); // for bounded resources
         let timeNeeded = assignCount / ratePerHour[idx];
         timeLeft -= timeNeeded;
         const taskId=`${planId}_${resource}_${i}`;
@@ -322,7 +360,7 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
           date: day.toLocaleDateString(), sortDate: day.getTime(),
           resource: `${resourceTypeIcons[types[idx]]} ${resource}`, type: resourceTypeLabels[types[idx]], rawType: types[idx], tag:tags[idx],
           pages: assignCount, interval:intervals[idx], id:taskId,
-          checked: isChecked, note: noteVal, resNote: resNotes[idx], priority: prios[idx]
+          checked: isChecked, note: noteVal, resNote: resNotes[idx], priority: prios[idx], isInfinite: noTotalArr[idx]
         });
       }
     });
@@ -340,29 +378,37 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
     let arr = groupedByDate[d];
     displayArr = displayArr.concat(arr.sort((a,b)=> (prioSortOrder[a.priority||"medium"] - prioSortOrder[b.priority||"medium"])));
   });
-  let scheduleHtml='<h2>Study Schedule</h2><ul id="draggable-list">';
-  displayArr.forEach((item,idx)=>{
-    if (item.resource === "Rest/Review Day") {
-      scheduleHtml += `<li class="draggable-item priority-medium" tabindex="0">
-        <b>${item.date}</b>: <span style="color:#d88427;font-weight:bold;">Rest / Review Day</span>
+  let scheduleHtml;
+  if (displayArr.length === 0) {
+    scheduleHtml = '<h2>Study Schedule</h2><div style="color:#bc2d2d;margin:24px;">No tasks scheduled. Please add resources and create a schedule.</div>';
+  } else {
+    scheduleHtml='<h2>Study Schedule</h2><ul id="draggable-list">';
+    displayArr.forEach((item,idx)=>{
+      if (item.resource === "Rest/Review Day") {
+        scheduleHtml += `<li class="draggable-item priority-medium" tabindex="0">
+          <b>${item.date}</b>: <span style="color:#d88427;font-weight:bold;">Rest / Review Day</span>
+        </li>`;
+        return;
+      }
+      const prioClass = item.priority==='high' ? 'priority-high' : item.priority==='low' ? 'priority-low' : 'priority-medium';
+      const prioLabel = `<span class="priority-label ${item.priority}">${item.priority==='high'?'⭐ High':item.priority==='medium'?'Medium':'Low'}</span>`;
+      scheduleHtml += `<li class="draggable-item ${prioClass}" draggable="true" tabindex="0" role="listitem" data-tid="${item.id}">
+        <span class="drag-indicator" aria-label="Drag" tabindex="-1">&#x2630;</span>
+        <input type="checkbox" class="progress-checkbox" data-task="${item.id}" ${item.checked} aria-label="Mark complete">
+        ${prioLabel}
+        <b>${item.date}</b>: ${item.resource}
+        <span style="color:#222;font-size:13px;">(${item.type})</span>
+        <span style="color:#297bb7;font-size:13px;"> [${item.tag}]</span>,
+        Assigned: <b>${item.pages}</b>
+        <span style="font-size:13px;">(${rateTypeLabels[item.rawType]})</span>
+        <span style="color:#777; font-style:italic;">${item.resNote}</span>
+        ${item.isInfinite ? "<span style='color:#555;font-size:0.95em;font-style:italic;'>(infinite)</span>" : ""}
+        <input type="text" class="note-input" data-task-note="${item.id}" placeholder="Add note..." value="${item.note}" aria-label="Task note">
+        <button class="del-btn" aria-label="Delete task" tabindex="-1">✖</button>
       </li>`;
-      return;
-    }
-    const prioClass = item.priority==='high' ? 'priority-high' : item.priority==='low' ? 'priority-low' : 'priority-medium';
-    const prioLabel = `<span class="priority-label ${item.priority}">${item.priority==='high'?'⭐ High':item.priority==='medium'?'Medium':'Low'}</span>`;
-    scheduleHtml += `<li class="draggable-item ${prioClass}" draggable="true" tabindex="0" role="listitem" data-tid="${item.id}">
-      <span class="drag-indicator" aria-label="Drag" tabindex="-1">&#x2630;</span>
-      <input type="checkbox" class="progress-checkbox" data-task="${item.id}" ${item.checked} aria-label="Mark complete">
-      ${prioLabel}
-      <b>${item.date}</b>: ${item.resource} <span style="color:#222;font-size:13px;">(${item.type})</span>
-      <span style="color:#297bb7;font-size:13px;"> [${item.tag}]</span>,
-      Assigned: <b>${item.pages}</b> <span style="font-size:13px;">(${rateTypeLabels[item.rawType]})</span>
-      <span style="color:#777; font-style:italic;">${item.resNote}</span>
-      <input type="text" class="note-input" data-task-note="${item.id}" placeholder="Add note..." value="${item.note}" aria-label="Task note">
-      <button class="del-btn" aria-label="Delete task" tabindex="-1">✖</button>
-    </li>`;
-  });
-  scheduleHtml+='</ul>';
+    });
+    scheduleHtml+='</ul>';
+  }
   document.getElementById('schedule').innerHTML=scheduleHtml;
 
   setTimeout(()=>{
@@ -424,9 +470,12 @@ function extractScheduleArrFromModel() {
           resource: name,
           date: dayObj.toLocaleDateString(),
           dateObj: new Date(dayObj),
-          pages: plan.pageCounts[ri],
+          pages: plan.noTotalArr && plan.noTotalArr[ri]
+            ? plan.ratePerHour[ri]
+            : plan.pageCounts && plan.pageCounts[ri] ? plan.pageCounts[ri] : 0,
           priority: plan.priorities ? plan.priorities[ri] : 'medium',
-          checked: progress[`${plan.planId}_${name}_${i}`]||false
+          checked: progress[`${plan.planId}_${name}_${i}`]||false,
+          isInfinite: plan.noTotalArr ? plan.noTotalArr[ri] : false
         });
       });
     });
@@ -443,11 +492,15 @@ function renderAllViews() {
 function renderCalendar(schedule) {
   const calDiv = document.getElementById('calendar-view');
   calDiv.innerHTML = '<div id="study-calendar"></div>';
+  if (!schedule || schedule.length === 0) {
+    calDiv.innerHTML += '<div style="margin:28px;color:#bc2d2d;">No scheduled tasks found. Create a study plan first!</div>';
+    return;
+  }
   let events = [];
   (schedule||[]).forEach(task=>{
     if(task.resource && !task.checked) {
       events.push({
-        title: task.resource + ' (' + task.pages + ')',
+        title: task.resource + (task.isInfinite ? " (∞)" : "") + ' (' + task.pages + ')',
         start: task.dateObj,
         allDay: true,
         color: task.priority==='high'?'#fa3939':task.priority==='medium'?'#fabf3a':'#7ed957'
@@ -467,6 +520,10 @@ function renderCalendar(schedule) {
 }
 function renderGantt(schedule) {
   const container = document.getElementById('gantt-view');
+  if (!schedule || schedule.length === 0) {
+    container.innerHTML = '<h2>Gantt Timeline</h2><div style="margin:28px;color:#bc2d2d;">No scheduled tasks found. Create a study plan first!</div>';
+    return;
+  }
   let html = '<h2>Gantt Timeline</h2><div style="max-width:650px;">';
   let tasks = (schedule||[]).filter(x=>x.resource && !x.checked);
   let resources = Array.from(new Set(tasks.map(x=>x.resource)));
@@ -474,7 +531,7 @@ function renderGantt(schedule) {
     let barTasks = tasks.filter(x=>x.resource===resource);
     html+=`<div><b>${resource}</b><div style="display:flex;">`;
     barTasks.forEach(t=>{
-      html+=`<div style="flex:1;padding:3px 0;margin:0 2px;background:${t.priority==='high'?'#fa3939':t.priority==='medium'?'#fabf3a':'#7ed957'};" title="${t.date}">${t.date}</div>`;
+      html+=`<div style="flex:1;padding:3px 0;margin:0 2px;background:${t.priority==='high'?'#fa3939':t.priority==='medium'?'#fabf3a':'#7ed957'};" title="${t.date}">${t.date}${t.isInfinite?" ∞":""}</div>`;
     });
     html+='</div></div>';
   });
@@ -484,6 +541,12 @@ function renderGantt(schedule) {
 function renderAnalyticsChart() {
   let chartCanvas = document.getElementById('analytics-chart');
   let schedule = window.currentScheduleArr||[];
+  if (!schedule || schedule.length === 0) {
+    document.getElementById('analytics-summary').innerHTML = '<div style="color:#bc2d2d;margin:18px;">No scheduled tasks found. Create a study plan first!</div>';
+    chartCanvas.style.display = "none";
+    return;
+  }
+  chartCanvas.style.display = "";
   let dataByResource = {};
   schedule.forEach(task=>{
     let res = task.resource||'Other';
@@ -497,8 +560,6 @@ function renderAnalyticsChart() {
   let summary = resources.map((r,i)=>`<b>${r}</b>: ${values[i]} assigned`).join('<br>');
   document.getElementById('analytics-summary').innerHTML = summary;
 }
-
-// Export, Backup/Restore and Print logic:
 document.getElementById('download-csv-btn').onclick = function() {
   if (!window.lastPlanConfig) { alert('No schedule to export!'); return; }
   let csv = 'Priority,Date,Resource,Type,Tag,Assigned,Note\n';
@@ -556,44 +617,52 @@ END:VCALENDAR`;
   setTimeout(()=>{document.body.removeChild(a); URL.revokeObjectURL(url);}, 100);
 };
 
-document.getElementById('download-pdf-btn').onclick = function() { window.print(); };
+document.getElementById('download-pdf-btn').onclick = function() {
+  const scheduleDiv = document.getElementById('schedule');
+  if (!scheduleDiv || scheduleDiv.innerText.trim().length === 0 || /no tasks scheduled/i.test(scheduleDiv.innerHTML)) {
+    alert("No schedule found to export. Please create a schedule first.");
+    return;
+  }
+  window.print();
+};
 
 document.getElementById('backup-btn').onclick = function() {
   if (!window.lastPlanConfig) { alert('No schedule to export!'); return; }
   let json = JSON.stringify({
-    planConfig: window.lastPlanConfig,
+    planConfig: window.lastPlanConfig || {},
     progress: window.lastProgressCache || {},
     notes: window.lastNotesCache || {},
     manualOrder: window.lastOrderCache || {}
-  },null,2);
-  let blob=new Blob([json],{type:"application/json"});
-  let url=window.URL.createObjectURL(blob);
-  let link=document.createElement("a");
-  link.href=url;link.download="study_plan_backup.json";
-  document.body.appendChild(link);link.click();
-  setTimeout(()=>{document.body.removeChild(link);window.URL.revokeObjectURL(url);},100);
+  }, null, 2);
+  let blob = new Blob([json], {type:"application/json"});
+  let url = window.URL.createObjectURL(blob);
+  let a = document.createElement("a");
+  a.href = url; a.download = "study_plan_backup.json";
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{document.body.removeChild(a);window.URL.revokeObjectURL(url);},100);
 };
-document.getElementById('restore-btn').onclick = function() {
-  document.getElementById('restore-file').click();
-};
+
+document.getElementById('restore-btn').onclick = function() { document.getElementById('restore-file').click(); };
 document.getElementById('restore-file').onchange = function(evt) {
   let file = evt.target.files[0];
+  if (!file) return;
   let reader = new FileReader();
   reader.onload = function(e) {
     try {
       let obj = JSON.parse(e.target.result);
-      if (confirm('Restore this plan and overwrite the current progress? Use backup before if needed.')) {
-        window.lastPlanConfig = obj.planConfig;
-        window.lastProgressCache = obj.progress || {};
-        window.lastNotesCache = obj.notes || {};
-        window.lastOrderCache = obj.manualOrder || {};
-        renderSchedule(window.lastPlanConfig, window.lastProgressCache, false);
-        renderAllViews();
-        alert('Backup restored!');
-      }
-    } catch { alert('Could not parse backup.'); }
+      if (!obj.planConfig) throw new Error("Missing planConfig");
+      window.lastPlanConfig = obj.planConfig;
+      window.lastProgressCache = obj.progress || {};
+      window.lastNotesCache = obj.notes || {};
+      window.lastOrderCache = obj.manualOrder || {};
+      renderSchedule(window.lastPlanConfig, window.lastProgressCache, false);
+      renderAllViews();
+      alert('Backup restored!');
+    } catch(e) {
+      alert('Could not parse backup. File may be corrupted or from an incompatible/old version.');
+    }
   };
-  if(file)reader.readAsText(file);
+  reader.readAsText(file);
 };
 function saveProgress(progress, notes, manualOrder) {
   localStorage.setItem('studyProgress', JSON.stringify(progress));
@@ -603,7 +672,6 @@ function saveProgress(progress, notes, manualOrder) {
 function loadProgress() { return JSON.parse(localStorage.getItem('studyProgress') || '{}'); }
 function loadNotes() { return JSON.parse(localStorage.getItem('studyNotes') || '{}'); }
 function loadManualOrder() { return JSON.parse(localStorage.getItem('studyManualOrder') || '{}'); }
-
 </script>
 </body>
 </html>
