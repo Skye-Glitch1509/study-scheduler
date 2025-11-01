@@ -37,9 +37,6 @@
     button:hover, input[type="button"]:hover {background: var(--primary-btn-hover); box-shadow: 0 2px 20px #2562cf2a;}
     #bulk-modal-inner {background: var(--card);}
     body.dark #bulk-modal-inner {background: var(--dark-card);}
-    .template-strip {margin-bottom:17px;}
-    .template-strip button {background:var(--accent);color:var(--main);}
-    body.dark .template-strip button {background:var(--dark-card);color:var(--dark-main);}
     .weekday-checkboxes label {font-weight:500;margin-right:13px;}
     #schedule, .draggable-item {font-size:1em;}
     #progress-bar-container { width: 100%; max-width: 510px; height: 22px; border-radius: 17px;
@@ -72,12 +69,6 @@
 <div class="app-header">
   <h1>Study Scheduler</h1>
   <button id="darkmode-btn" title="Toggle dark mode">🌙</button>
-</div>
-<div class="template-strip">
-  <b>Templates:</b>
-  <button onclick="applyTemplate('exam')">Exam Cram</button>
-  <button onclick="applyTemplate('balanced')">Balanced Review</button>
-  <button onclick="applyTemplate('weekend')">Weekend Only</button>
 </div>
 <form id="study-form" style="display:block;">
   <div class="card card-row">
@@ -219,22 +210,6 @@ const resourceTypeLabels = {
 const rateTypeLabels = {
   book: "pages/hr", qbank: "questions/hr", flashcards: "cards/hr", video: "videos/hr", other: "items/hr"
 };
-const studyTemplates = {
-  exam: {
-    resources: [["Boards Book", 800, "book", "high yield", "", 20], ["QBank Full", 2400, "qbank", "", "Timed only", 30]],
-    intervals: [1,1], types: ["book","qbank"], tags:["high yield",""], notes:["","Timed only"], rates:[20,30],
-    weekdays: [0,1,2,3,4,5,6], startDays:0, reviewDay:7
-  },
-  balanced: {
-    resources: [["Textbook",500,"book","","",15],["Flash Deck",150,"flashcards","","",35],["Review Videos",40,"video","","",3]],
-    intervals:[2,2,3], types:["book","flashcards","video"], tags:["","",""], notes:["","",""], rates:[15,35,3],
-    weekdays:[1,2,3,4,5], startDays:0, reviewDay:7
-  },
-  weekend: {
-    resources: [["MCQ Practice",300,"qbank","","",10],["Weekly Review",36,"video","","",2]],
-    intervals: [7,7], types:["qbank","video"], tags:["",""], notes:["",""], rates:[10,2], weekdays:[6,0], startDays:0, reviewDay:0
-  }
-};
 
 function updateRateTypeLabels() {
   document.querySelectorAll('.resource-row').forEach(row => {
@@ -272,23 +247,6 @@ document.getElementById('add-resource-btn').addEventListener('click', function()
   updateRateTypeLabels();
 });
 updateRateTypeLabels();
-
-function applyTemplate(which) {
-  const resourceList = document.getElementById('resource-list');
-  resourceList.innerHTML = '';
-  const tpl = studyTemplates[which];
-  if (tpl) {
-    tpl.resources.forEach((res, idx) => {
-      addResourceRow(res[0], res[1], res[2], tpl.tags[idx], tpl.notes[idx], tpl.intervals[idx], tpl.rates[idx]);
-    });
-  }
-  // Always append a blank row for user input
-  addResourceRow();
-  document.querySelectorAll('.weekday').forEach(cb=>{
-    cb.checked = tpl.weekdays.includes(parseInt(cb.value));
-  });
-  document.getElementById('review-dropdown').value = tpl.reviewDay;
-}
 
 document.getElementById('bulk-type-dropdown').addEventListener('change', function() {
   document.getElementById('bulk-rate-type-label').textContent = rateTypeLabels[this.value] || "items/hr";
