@@ -1,49 +1,80 @@
-<!-- Save as public/index.html, replacing previous version -->
 <!DOCTYPE html>
 <html>
 <head>
   <title>Study Scheduler</title>
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,500,600,700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    .resource-row { margin-bottom: 7px; }
-    ul { list-style-type: none; padding-left: 0; }
-    li { margin-bottom: 7px; }
-    .progress-checkbox { margin-right: 8px; cursor:pointer;}
-    #add-resource-btn, #bulk-add-btn, #rebalance-btn, #adv-rebalance-btn, #download-csv-btn, #download-ics-btn, #download-pdf-btn, #backup-btn, #restore-btn { margin-top: 8px; margin-bottom: 10px; }
-    #progress-bar-container {
-      width: 100%; max-width: 500px; height: 24px;
-      background: #eee; border-radius: 12px; overflow: hidden; margin-bottom:20px; margin-top: 24px;
+    :root {
+      --bg: #f7fafc; --card: #fff; --main: #2562cf;
+      --accent: #e5eaf1; --text: #232c40; --border: #e2e8f0;
+      --primary-btn: #2562cf; --primary-btn-hover: #1e4fab; --shadow: 0 2px 14px #23262f10;
+      --dark-bg: #21263b; --dark-card: #272a38; --dark-main: #c0cefa; --dark-accent: #23262f;
+      --dark-text: #e0e7fa; --dark-border: #323648;
     }
-    #progress-bar { width: 0%; height: 100%; background: #4CAF50; transition: width 0.3s;}
-    #progress-label { margin-top: 3px; font-weight: bold; }
-    .weekday-checkboxes label { margin-right: 12px; }
-    .interval-label { display: inline-block; margin-left: 12px; }
-    .interval-dropdown { width: 110px; margin-left: 6px; }
-    .resource-type-dropdown { width: 90px; margin-left: 8px; }
-    .resource-tag, .resource-note { width:95px; margin-left:8px; }
-    .note-input { margin-left: 8px; width: 160px; margin-right: 4px; }
-    #holiday-list { margin-bottom: 10px; }
-    .holiday-input-row { margin-bottom: 4px; }
-    .drag-indicator { cursor: grab; margin-right: 6px; font-weight: bold; color: #888; }
-    .dragging { opacity: 0.5;}
-    .drop-target { background: #fffae6 !important; }
-    #bulk-modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.16); z-index:1500; }
-    #bulk-modal-inner { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-      background: #fff; padding:36px; border-radius:24px; box-shadow:0 0 32px #1113; min-width:320px; min-height:250px; }
-    #rest-days-container, #review-days-container { margin-bottom:8px;}
-    #review-dropdown { width:80px; margin-left:5px;}
-    #review-days-container { margin-top:4px;}
-    #load-graph-container { margin-top: 20px; margin-bottom:24px;}
-    #load-graph-bar { display:flex; align-items:end; height:70px; gap:2px;}
-    #load-graph-bar>div { background:#9ec0ff; min-width:6px; border-radius:3px 3px 0 0; transition:height 0.2s; }
-    #load-graph-legend {font-size:12px;color:#444;margin-top:2px;}
-    #template-strip { background: #f7fafc; border-radius:12px; padding:6px 15px; margin:10px 0 14px 0;}
-    #template-strip button { margin-right:10px; border-radius:6px; }
+    body {
+      font-family: 'Inter', Arial, sans-serif; background: var(--bg); color: var(--text);
+      min-height: 100vh; transition: background .2s, color .2s;
+    }
+    body.dark {background: var(--dark-bg); color: var(--dark-text);}
+    h1 { font-size: 2.1em; color: var(--main); font-weight:700; letter-spacing:-0.7px; margin-bottom:8px;}
+    .app-header { display: flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    #darkmode-btn { border:none; background: var(--accent); color: var(--main); width:34px; height:34px; font-size:23px;
+      border-radius:50%; cursor:pointer; transition:.17s; margin-left:13px; margin-bottom:2px; }
+    body.dark #darkmode-btn { background:var(--dark-accent); color:var(--dark-main);}
+    .card {background: var(--card); box-shadow: var(--shadow); border-radius:16px; border: 1px solid var(--border);
+      padding: 13px 20px 10px 17px; margin-bottom:12px; transition: background .2s, border .2s, color .2s;}
+    body.dark .card {background: var(--dark-card); border-color: var(--dark-border);}
+    .card-row { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:7px;}
+    .card-row label {font-weight:500;margin-right:7px;}
+    .card-row input, .card-row select { background: var(--accent); border-radius:7px; border: 1px solid var(--border); font-size:15px; padding:5px 8px;}
+    body.dark .card-row input, body.dark .card-row select { background: var(--dark-accent); color: var(--dark-text); border-color: var(--dark-border);}
+    .card-row .remove-btn {background:transparent;color:#bc2d2d;border:none;font-size:1em; cursor:pointer;}
+    .card-row .remove-btn:hover {text-decoration:underline;}
+    button, input[type="button"] {
+      font-family: 'Inter', Arial, sans-serif; background: var(--primary-btn); color: #fff; border:none; border-radius:8px; font-size:1em;
+      padding: 7px 15px; margin-right: 8px; margin-bottom:7px; box-shadow: 0 1px 8px #2562cf12; transition: background .15s, box-shadow .2s;
+      font-weight:600; letter-spacing:-0.03em; cursor:pointer;}
+    button:hover, input[type="button"]:hover {background: var(--primary-btn-hover); box-shadow: 0 2px 20px #2562cf2a;}
+    #bulk-modal-inner {background: var(--card);}
+    body.dark #bulk-modal-inner {background: var(--dark-card);}
+    .template-strip {margin-bottom:17px;}
+    .template-strip button {background:var(--accent);color:var(--main);}
+    body.dark .template-strip button {background:var(--dark-card);color:var(--dark-main);}
+    .weekday-checkboxes label {font-weight:500;margin-right:13px;}
+    #schedule, .draggable-item {font-size:1em;}
+    #progress-bar-container { width: 100%; max-width: 510px; height: 22px; border-radius: 17px;
+      overflow: hidden; background: var(--accent); margin-bottom:20px; margin-top: 21px;}
+    #progress-bar {border-radius:17px; background:var(--main);}
+    .draggable-item { background: var(--card); box-shadow: var(--shadow); border-radius:9px; border: 1.4px solid var(--border); margin-bottom:9px;
+      padding: 8px 16px; display: flex; align-items: center; transition: background .2s, box-shadow .15s;}
+    body.dark .draggable-item {background:var(--dark-card); border-color:var(--dark-border);}
+    .draggable-item.drop-target {background: #e5f2ff;}
+    body.dark .draggable-item.drop-target {background: #2562cf19;}
+    .drag-indicator {font-size:1.3em; color:#888; cursor:grab;margin-right:8px;}
+    .progress-checkbox { accent-color: var(--main);}
+    .note-input, .resource-tag, .resource-note {font-size:15px;}
+    #load-graph-container {margin-top:22px;}
+    #load-graph-bar > div { background: var(--main); border-radius:7px 7px 0 0; min-width:9px; margin-right:3px;}
+    body.dark #load-graph-bar > div {background:var(--dark-main);}
+    @media (max-width: 900px){ .card {padding:12px;} }
+    @media (max-width:700px){
+      body {margin:13px;}
+      .card, #bulk-modal-inner {padding:8px;}
+      #bulk-modal-inner {min-width:215px;}
+      #progress-bar-container {max-width:100%;}
+    }
+    /* Bulk modal */
+    #bulk-modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.16); z-index:1500;}
+    #bulk-modal-inner { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      min-width:320px; min-height:250px;}
   </style>
 </head>
 <body>
-  <h1>Study Scheduler</h1>
-  <div id="template-strip">
+  <div class="app-header">
+    <h1>Study Scheduler</h1>
+    <button id="darkmode-btn" title="Toggle dark mode">🌙</button>
+  </div>
+  <div class="template-strip">
     <b>Templates:</b>
     <button onclick="applyTemplate('exam')">Exam Cram</button>
     <button onclick="applyTemplate('balanced')">Balanced Review</button>
@@ -51,9 +82,9 @@
   </div>
   <form id="study-form" style="display:block;">
     <div id="resource-list">
-      <div class="resource-row">
-        <label>Book/Resource Name: <input type="text" class="resource" required></label>
-        <label>Total Pages: <input type="number" class="pages" required></label>
+      <div class="card card-row resource-row">
+        <label>Resource: <input type="text" class="resource" required></label>
+        <label>Pages: <input type="number" class="pages" required style="width:70px;"></label>
         <label>Type: 
           <select class="resource-type-dropdown">
             <option value="book">📚 Book</option>
@@ -63,24 +94,24 @@
             <option value="other">📄 Other</option>
           </select>
         </label>
-        <label>Tag: <input type="text" class="resource-tag" placeholder="Tag"></label>
-        <label>Note: <input type="text" class="resource-note" placeholder="Resource note"></label>
-        <label class="interval-label">
+        <label>Tag: <input type="text" class="resource-tag" placeholder="Tag" style="width:90px;"></label>
+        <label>Note: <input type="text" class="resource-note" placeholder="Note" style="width:120px;"></label>
+        <label>
           Interval:
-          <select class="interval-dropdown">
+          <select class="interval-dropdown" style="width:87px;">
             <option value="1">Every day</option>
             <option value="2">Every other day</option>
             <option value="3">Every 3rd day</option>
             <option value="7">Every week</option>
           </select>
         </label>
-        <button type="button" class="remove-btn" style="display:none;">Remove</button>
+        <button type="button" class="remove-btn" style="display:none;">✖</button>
       </div>
     </div>
-    <button type="button" id="add-resource-btn">Add Another Resource</button>
-    <button type="button" id="bulk-add-btn">Bulk Add Resources</button>
+    <button type="button" id="add-resource-btn">Add Resource</button>
+    <button type="button" id="bulk-add-btn">Bulk Add</button>
     <br>
-    <div class="weekday-checkboxes">
+    <div class="card card-row weekday-checkboxes">
       <label><input type="checkbox" class="weekday" value="0" checked> Sun</label>
       <label><input type="checkbox" class="weekday" value="1" checked> Mon</label>
       <label><input type="checkbox" class="weekday" value="2" checked> Tue</label>
@@ -89,19 +120,18 @@
       <label><input type="checkbox" class="weekday" value="5" checked> Fri</label>
       <label><input type="checkbox" class="weekday" value="6" checked> Sat</label>
     </div>
-    <br>
-    <div id="rest-days-container">
-      <b>Off/Rest Days (specific dates):</b>
-      <div id="holiday-list">
+    <div class="card card-row" id="rest-days-container">
+      <b>Rest/Off Dates:</b>
+      <div id="holiday-list" style="margin-left:10px;">
         <div class="holiday-input-row">
           <input type="date" class="holiday-date">
-          <button type="button" class="remove-holiday-btn" style="display:none;">Remove</button>
+          <button type="button" class="remove-holiday-btn" style="display:none;">✖</button>
         </div>
       </div>
-      <button type="button" id="add-holiday-btn">Add Rest/Off Date</button>
+      <button type="button" id="add-holiday-btn">Add Off Date</button>
     </div>
-    <div id="review-days-container">
-      <b>Periodic Review/Off:</b>
+    <div class="card card-row" id="review-days-container">
+      <b>Periodic Review:</b>
       <label>
         Every
         <select id="review-dropdown">
@@ -115,18 +145,18 @@
         </select>
         is Review/Rest
       </label>
-      <span style="font-size:14px;margin-left:10px;">(will insert rest/review milestone)</span>
     </div>
-    <br>
-    <label>Start Date: <input type="date" id="start-date" required></label><br>
-    <label>End Date: <input type="date" id="end-date" required></label><br>
-    <button type="submit">Create Schedule</button>
+    <div class="card card-row">
+      <label>Start Date: <input type="date" id="start-date" required></label>
+      <label>End Date: <input type="date" id="end-date" required></label>
+      <button type="submit" style="margin-left:14px;">Create Schedule</button>
+    </div>
   </form>
   <div>
-    <button type="button" id="download-csv-btn" style="display:none;">Download CSV</button>
-    <button type="button" id="download-ics-btn" style="display:none;">Download Calendar (.ics)</button>
-    <button type="button" id="download-pdf-btn" style="display:none;">Print / Export PDF</button>
-    <button type="button" id="backup-btn" style="display:none;">Backup / Export JSON</button>
+    <button type="button" id="download-csv-btn" style="display:none;">Export CSV</button>
+    <button type="button" id="download-ics-btn" style="display:none;">Export Calendar (.ics)</button>
+    <button type="button" id="download-pdf-btn" style="display:none;">Print/PDF</button>
+    <button type="button" id="backup-btn" style="display:none;">Backup JSON</button>
     <button type="button" id="restore-btn" style="display:inline;">Import JSON</button>
     <input type="file" id="restore-file" style="display:none;">
   </div>
@@ -134,22 +164,19 @@
     <div id="progress-bar"></div>
   </div>
   <div id="progress-label"></div>
-  <button type="button" id="rebalance-btn" style="display:none;">Rebalance Schedule</button>
-  <button type="button" id="adv-rebalance-btn" style="display:none;">Advanced Rebalance (smooth workload)</button>
+  <button type="button" id="rebalance-btn" style="display:none;">Rebalance</button>
+  <button type="button" id="adv-rebalance-btn" style="display:none;">Advanced Rebalance</button>
   <div id="load-graph-container" style="display:none;">
-    <b>Daily Load Graph</b>
+    <b style="font-weight:600;">Daily Load Graph</b>
     <div id="load-graph-bar"></div>
     <div id="load-graph-legend"></div>
   </div>
   <div id="schedule"></div>
-  <!-- Bulk Add Modal -->
+  <!-- Bulk Modal -->
   <div id="bulk-modal">
-    <div id="bulk-modal-inner">
+    <div id="bulk-modal-inner" class="card">
       <h2>Bulk Add Resources</h2>
-      <div>
-        <b>Paste resource names (one per line):</b><br>
-        <textarea id="bulk-resource-input" rows="10" style="width:98%"></textarea>
-      </div>
+      <div><textarea id="bulk-resource-input" rows="10" style="width:98%;background:var(--accent);"></textarea></div>
       <br>
       <label>Type:
         <select id="bulk-type-dropdown">
@@ -163,7 +190,7 @@
       <label>Tag: <input type="text" id="bulk-tag-input" placeholder="Tag"></label>
       <label>Note: <input type="text" id="bulk-note-input" placeholder="Note"></label>
       <label>
-        Pages/Items per resource:
+        Pages/Items:
         <input type="number" id="bulk-pages-input" min="1" value="10" style="width:60px;">
       </label>
       <br><br>
@@ -279,7 +306,7 @@ function getScheduleDays(startDate, endDate, weekDays, skipDatesArr) {
     dt.setDate(dt.getDate() + 1); }
   return days;
 }
-
+// Export/import, backup, print
 document.getElementById('backup-btn').onclick = function() {
   if (!lastPlanConfig) { alert('No plan to export!'); return; }
   let json = JSON.stringify({
@@ -339,7 +366,7 @@ function applyTemplate(which) {
   document.getElementById('review-dropdown').value = tpl.reviewDay;
 }
 
-// Algorithm: advanced rebalance to minimize workload variance
+// Advanced rebalance to minimize workload variance
 function advancedRebalance(planConfig, progress, callback) {
   const days = planConfig.scheduleDays.length;
   const tasksPerResource = planConfig.resourceNames.map((res,idx)=>{
@@ -351,15 +378,12 @@ function advancedRebalance(planConfig, progress, callback) {
     }));
   });
   let allTasks = tasksPerResource.flat();
-  // Initial assignment: map of day to tasks
   let assignments = Array.from({length:days}, ()=>[]);
   allTasks.forEach(task=>assignments[task.day].push(task));
-  // Basic smoothing loop
   for(let iter=0;iter<10;iter++) {
     let dayLoads=assignments.map(day=>day.reduce((a,b)=>a+b.pages,0));
     let maxI=dayLoads.indexOf(Math.max(...dayLoads)), minI=dayLoads.indexOf(Math.min(...dayLoads));
     if(dayLoads[maxI]-dayLoads[minI]<=1)break;
-    // Try to move a task from max to min if interval allows (not already assigned)
     let taskToMove=assignments[maxI].find(task=>
       !assignments[minI].some(t=>t.ridx===task.ridx)
     );
@@ -368,15 +392,11 @@ function advancedRebalance(planConfig, progress, callback) {
       assignments[maxI]=assignments[maxI].filter(x=>x!==taskToMove);
     } else break;
   }
-  // Build new schedule: map back to resource arrays
   callback(assignments);
 }
-
 document.getElementById('adv-rebalance-btn').addEventListener('click', function(){
   if (!lastPlanConfig) return;
   advancedRebalance(lastPlanConfig, lastProgressCache, function(newAssignments){
-    // Build scheduleDays as before
-    // Build rendering, graph, etc
     let plan = lastPlanConfig;
     let scheduleHtml='<h2>Advanced Rebalanced Schedule</h2><ul id="draggable-list">';
     let workloadPerDay = [];
@@ -398,7 +418,6 @@ document.getElementById('adv-rebalance-btn').addEventListener('click', function(
     }
     scheduleHtml+='</ul>';
     document.getElementById('schedule').innerHTML=scheduleHtml;
-    // Update graph
     let graphBar = document.getElementById('load-graph-bar');
     graphBar.innerHTML = "";
     let max = Math.max(...workloadPerDay, 1);
@@ -407,39 +426,28 @@ document.getElementById('adv-rebalance-btn').addEventListener('click', function(
       let day = plan.scheduleDays[idx].toLocaleDateString();
       graphBar.innerHTML += `<div title="${day}: ${val} items" style="height:${height}px"></div>`;
     });
-    document.getElementById('load-graph-legend').innerText =
-      `Each vertical bar = workload (# pages/items), day-by-day.`;
+    document.getElementById('load-graph-legend').innerText =`Each vertical bar = workload (# pages/items), day-by-day.`;
     document.getElementById('progress-bar-container').style.display = "none";
   });
 });
-
-document.getElementById('rebalance-btn').addEventListener('click',function(){
-  if(!lastPlanConfig)return;
-  const progress=loadProgress()[lastPlanConfig.planId]||{};
-  renderSchedule(lastPlanConfig,progress,true);
-});
-
-document.getElementById('study-form').addEventListener('submit',function(event){
-  event.preventDefault();
-  const resourceNames = Array.from(document.querySelectorAll('.resource')).map(input=>input.value);
-  const pageCounts = Array.from(document.querySelectorAll('.pages')).map(input=>parseInt(input.value,10));
-  const intervals = Array.from(document.querySelectorAll('.interval-dropdown')).map(select=>parseInt(select.value,10));
-  const resourceTypes = Array.from(document.querySelectorAll('.resource-type-dropdown')).map(e=>e.value);
-  const resourceTags = Array.from(document.querySelectorAll('.resource-tag')).map(e=>e.value);
-  const resourceNotes = Array.from(document.querySelectorAll('.resource-note')).map(e=>e.value);
-  const startDate = new Date(document.getElementById('start-date').value);
-  const endDate = new Date(document.getElementById('end-date').value);
-  const weekDays = getSelectedWeekdays();
-  const reviewDayInterval = parseInt(document.getElementById('review-dropdown').value, 10) || 0;
-  const skipDatesArr = getRestDays(startDate, endDate, reviewDayInterval);
-  const scheduleDays = getScheduleDays(startDate, endDate, weekDays, skipDatesArr);
-  const planId = `${startDate.toISOString().slice(0,10)}_${endDate.toISOString().slice(0,10)}_${resourceNames.join('_')}_${weekDays.join('-')}_${skipDatesArr.join('-')}_${intervals.join('-')}`;
-  lastPlanConfig = {resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes};
-  lastScheduleDays = scheduleDays;
-  const progress = loadProgress()[planId]||{};
-  renderSchedule(lastPlanConfig,progress,false,resourceTypes,skipDatesArr);
-});
-
+function updateProgressBar() {
+  if (lastBoxCount.total === 0) {
+    document.getElementById('progress-bar-container').style.display = "none";
+    document.getElementById('progress-label').innerText = "";
+    return;
+  }
+  const percent = Math.round((lastBoxCount.done / lastBoxCount.total) * 100);
+  document.getElementById('progress-bar').style.width = percent + "%";
+  document.getElementById('progress-bar-container').style.display = "block";
+  document.getElementById('progress-label').innerText = `Progress: ${lastBoxCount.done} / ${lastBoxCount.total} (${percent}%)`;
+}
+function countDaysDone(progress, planId, resource, daysIdxArr) {
+  return Object.keys(progress)
+    .filter(k => {
+      return k.startsWith(`${planId}_${resource}_`) && progress[k] &&
+        (!daysIdxArr || daysIdxArr.includes(parseInt(k.split('_').pop())));
+    }).length;
+}
 function renderSchedule(planConfig, progress, rebalance = false, resourceTypesArg=null, skipDatesArr=null) {
   const { resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes } = planConfig;
   const numDays = scheduleDays.length;
@@ -523,7 +531,6 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
   lastProgressCache=progress;
   lastNotesCache=notes;
   lastOrderCache=manualOrder;
-  // Load graph
   let graphBar = document.getElementById('load-graph-bar');
   graphBar.innerHTML = "";
   let max = Math.max(...workloadPerDay, 1);
@@ -582,122 +589,37 @@ function showLoadedSchedule(result) {
   lastOrderCache = result.manualOrder || {};
   renderSchedule(lastPlanConfig, lastProgressCache, false);
 }
-function downloadCSV(planConfig, progress, notes, manualOrder, resourceTypes, resourceTags, resourceNotes) {
-  // Same logic as previous, include type/tag/note in csvRows
-  if (!planConfig) return;
-  const { resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays } = planConfig;
-  let types = resourceTypes || [];
-  let tags = resourceTags || [];
-  let resNotes = resourceNotes || [];
-  let displayOrder = manualOrder && manualOrder[planId] ? manualOrder[planId] : null;
-  let numDays = scheduleDays.length; let csvRows = [["Date","Resource","Type","Tag","Resource Note","Pages/Items","Interval","Done","Note"]];
-  let daysIdxArrList = resourceNames.map((r, idx) => {let arr=[];for(let i=0;i<numDays;i+=intervals[idx])arr.push(i);return arr;});
-  let tasksArr = [];
-  for (let i=0;i<numDays;i++) {
-    const day = scheduleDays[i];
-    resourceNames.forEach((resource, idx) => {
-      let arr=daysIdxArrList[idx];
-      if(arr.includes(i)){
-        let pagesPerDay=Math.ceil(pageCounts[idx]/arr.length);
-        let arrPos=arr.indexOf(i);
-        let startPage=arrPos*pagesPerDay+1;let endPage=Math.min((arrPos+1)*pagesPerDay,pageCounts[idx]);
-        let intervalText="Every day";
-        if(intervals[idx]===2)intervalText="Every other day";
-        else if(intervals[idx]===3)intervalText="Every 3rd day";
-        else if(intervals[idx]===7)intervalText="Every week";
-        else if(intervals[idx]>1)intervalText=`Every ${intervals[idx]} days`;
-        let resourceType = types[idx] || "other";
-        let resourceTag = tags[idx] || "";
-        let rNote = resNotes[idx] || "";
-        const taskId=`${planId}_${resource}_${i}`;
-        const isComplete=progress[taskId]?"Yes":"No";
-        const noteVal=notes[taskId]?notes[taskId].replace(/"/g,'""'):"";
-        tasksArr.push([
-          day.toLocaleDateString(), resource, resourceTypeIcons[resourceType] + " " + resourceTypeLabels[resourceType],
-          resourceTag, rNote, `${startPage}-${endPage}`, intervalText, isComplete, `"${noteVal}"`
-        ]);
-      }
-    });
-  }
-  if(displayOrder){tasksArr.sort((a,b)=>displayOrder.indexOf(a[1])-displayOrder.indexOf(b[1]));}
-  tasksArr.forEach(t=>{csvRows.push(t);});
-  const csvText=csvRows.map(r=>r.join(",")).join("\r\n");
-  const blob=new Blob([csvText],{type:"text/csv"});
-  const url=window.URL.createObjectURL(blob);
-  const link=document.createElement("a");
-  link.href=url;link.download="study_schedule.csv";
-  document.body.appendChild(link);link.click();
-  setTimeout(()=>{document.body.removeChild(link);window.URL.revokeObjectURL(url);},100);
-}
-function downloadICS(planConfig, notes, manualOrder, resourceTypes, resourceTags, resourceNotes) {
-  // Similar logic—include tag/note in summary/desc
-  if (!planConfig) return;
-  const { resourceNames, pageCounts, intervals, planId, scheduleDays } = planConfig;
-  let manual=manualOrder&&manualOrder[planId]?manualOrder[planId]:null;
-  let types = resourceTypes || []; let tags = resourceTags || []; let resNotes = resourceNotes || [];
-  let numDays=scheduleDays.length;
-  let daysIdxArrList=resourceNames.map((r,idx)=>{let arr=[];for(let i=0;i<numDays;i+=intervals[idx])arr.push(i);return arr;});
-  let components=[`BEGIN:VCALENDAR`,`VERSION:2.0`,`CALSCALE:GREGORIAN`,`PRODID:-//User-Generated Study Scheduler//EN`];
-  let tasksArr=[];
-  for(let i=0;i<numDays;i++){
-    const day=scheduleDays[i];
-    resourceNames.forEach((resource,idx)=>{
-      let arr=daysIdxArrList[idx];
-      if(arr.includes(i)){
-        let pagesPerDay=Math.ceil(pageCounts[idx]/arr.length);
-        let arrPos=arr.indexOf(i);
-        let startPage=arrPos*pagesPerDay+1;
-        let endPage=Math.min((arrPos+1)*pagesPerDay,pageCounts[idx]);
-        let resourceType = types[idx] || "other";
-        let tag = tags[idx] || "";
-        let rNote = resNotes[idx] || "";
-        let intervalText="Every day";
-        if(intervals[idx]===2)intervalText="Every other day";
-        else if(intervals[idx]===3)intervalText="Every 3rd day";
-        else if(intervals[idx]===7)intervalText="Every week";
-        else if(intervals[idx]>1)intervalText=`Every ${intervals[idx]} days`;
-        const taskId=`${planId}_${resource}_${i}`;
-        const noteVal=notes[planId]&&notes[planId][taskId]?notes[planId][taskId]:'';
-        tasksArr.push({
-          date: new Date(day),
-          summary: `${resourceTypeIcons[resourceType]} ${resource} [${tag}] (${resourceTypeLabels[resourceType]}, ${intervalText})`,
-          description: `Read/complete pages/items ${startPage}-${endPage}\nTag: ${tag}\nResource Note: ${rNote}`+
-            (noteVal?`\nNote: ${noteVal}`:''),
-          id: taskId
-        });
-      }
-    });
-  }
-  if(manual){tasksArr.sort((a,b)=>manual.indexOf(a.id)-manual.indexOf(b.id));}
-  tasksArr.forEach(t=>{
-    let dtstamp=(new Date()).toISOString().replace(/[-:.]/g,"").split("T")[0]+"T000000Z";
-    let dtstart=datetoCal(t.date);
-    let dtend=datetoCal(new Date(t.date.getTime()+86400000));
-    components.push(
-      "BEGIN:VEVENT",
-      "UID:"+t.id+"@studyplanner",
-      "DTSTAMP:"+dtstamp,
-      "DTSTART;VALUE=DATE:"+dtstart,
-      "DTEND;VALUE=DATE:"+dtend,
-      "SUMMARY:"+escapeICS(t.summary),
-      "DESCRIPTION:"+escapeICS(t.description),
-      "END:VEVENT"
-    );
-  });
-  components.push(`END:VCALENDAR`);
-  let icsText=components.join("\r\n");
-  let blob=new Blob([icsText],{type:"text/calendar"});
-  let url=window.URL.createObjectURL(blob);
-  let link=document.createElement("a");
-  link.href=url;link.download="study_schedule.ics";
-  document.body.appendChild(link);link.click();
-  setTimeout(()=>{document.body.removeChild(link);window.URL.revokeObjectURL(url);},100);
-}
-function datetoCal(dt) {
-  function pad(n){return n<10?"0"+n:n;}
-  return [dt.getUTCFullYear(),pad(dt.getUTCMonth()+1),pad(dt.getUTCDate())].join('');
-}
-function escapeICS(str){return String(str||'').replace(/([,;])/g,"\\$1").replace(/\n/g,"\\n");}
+document.getElementById('rebalance-btn').addEventListener('click',function(){
+  if(!lastPlanConfig)return;
+  const progress=loadProgress()[lastPlanConfig.planId]||{};
+  renderSchedule(lastPlanConfig,progress,true);
+});
+document.getElementById('study-form').addEventListener('submit',function(event){
+  event.preventDefault();
+  const resourceNames = Array.from(document.querySelectorAll('.resource')).map(input=>input.value);
+  const pageCounts = Array.from(document.querySelectorAll('.pages')).map(input=>parseInt(input.value,10));
+  const intervals = Array.from(document.querySelectorAll('.interval-dropdown')).map(select=>parseInt(select.value,10));
+  const resourceTypes = Array.from(document.querySelectorAll('.resource-type-dropdown')).map(e=>e.value);
+  const resourceTags = Array.from(document.querySelectorAll('.resource-tag')).map(e=>e.value);
+  const resourceNotes = Array.from(document.querySelectorAll('.resource-note')).map(e=>e.value);
+  const startDate = new Date(document.getElementById('start-date').value);
+  const endDate = new Date(document.getElementById('end-date').value);
+  const weekDays = getSelectedWeekdays();
+  const reviewDayInterval = parseInt(document.getElementById('review-dropdown').value, 10) || 0;
+  const skipDatesArr = getRestDays(startDate, endDate, reviewDayInterval);
+  const scheduleDays = getScheduleDays(startDate, endDate, weekDays, skipDatesArr);
+  const planId = `${startDate.toISOString().slice(0,10)}_${endDate.toISOString().slice(0,10)}_${resourceNames.join('_')}_${weekDays.join('-')}_${skipDatesArr.join('-')}_${intervals.join('-')}`;
+  lastPlanConfig = {resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes};
+  lastScheduleDays = scheduleDays;
+  const progress = loadProgress()[planId]||{};
+  renderSchedule(lastPlanConfig,progress,false,resourceTypes,skipDatesArr);
+});
+document.getElementById('darkmode-btn').onclick = function() {
+  document.body.classList.toggle('dark');
+  this.innerText = document.body.classList.contains('dark') ? "🌞" : "🌙";
+};
+
+// (End script)
 </script>
 </body>
 </html>
