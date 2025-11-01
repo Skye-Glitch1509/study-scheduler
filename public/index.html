@@ -59,6 +59,13 @@
     #bulk-modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.16); z-index:1500;}
     #bulk-modal-inner { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
       min-width:320px; min-height:250px;}
+    /* Print only schedule section */
+    @media print {
+      body > *:not(#schedule) { display: none !important; }
+      #schedule { display: block !important; margin: 0 !important; }
+      #schedule ul { margin: 0 !important; }
+      #schedule h2 { margin-top: 0 !important; }
+    }
   </style>
 </head>
 <body>
@@ -75,7 +82,7 @@
   <div id="resource-list">
     <div class="card card-row resource-row">
       <label>Resource: <input type="text" class="resource" required></label>
-      <label>Pages: <input type="number" class="pages" required style="width:70px;"></label>
+      <label class="resource-pages-label">Pages: <input type="number" class="pages" required style="width:70px;"></label>
       <label>Type:
         <select class="resource-type-dropdown">
           <option value="book">📚 Book</option>
@@ -184,7 +191,7 @@
     </label>
     <label>Tag: <input type="text" id="bulk-tag-input" placeholder="Tag"></label>
     <label>Note: <input type="text" id="bulk-note-input" placeholder="Note"></label>
-    <label>
+    <label class="bulk-pages-label">
       Pages/Items:
       <input type="number" id="bulk-pages-input" min="1" value="10" style="width:60px;">
     </label>
@@ -203,16 +210,35 @@ const resourceTypeLabels = {
 const rateTypeLabels = {
   book: "pages/hr", qbank: "questions/hr", flashcards: "cards/hr", video: "videos/hr", other: "items/hr"
 };
+const pagesLabels = {
+  book: "Pages: ",
+  qbank: "Questions: ",
+  flashcards: "Cards: ",
+  video: "Videos: ",
+  other: "Items: "
+};
+const bulkPagesLabels = {
+  book: "Pages/Items: ",
+  qbank: "Questions/Items: ",
+  flashcards: "Cards/Items: ",
+  video: "Videos/Items: ",
+  other: "Items: "
+};
 
 function updateRateTypeLabels() {
   document.querySelectorAll('.resource-row').forEach(row => {
     const typeSel = row.querySelector('.resource-type-dropdown');
     const rateLabel = row.querySelector('.rate-type-label');
+    const pagesLabel = row.querySelector('.resource-pages-label');
     if (typeSel && rateLabel) {
       rateLabel.textContent = rateTypeLabels[typeSel.value] || "items/hr";
     }
+    if (typeSel && pagesLabel) {
+      pagesLabel.childNodes[0].textContent = pagesLabels[typeSel.value] || "Items: ";
+    }
     typeSel.addEventListener('change', function() {
       rateLabel.textContent = rateTypeLabels[this.value] || "items/hr";
+      if (pagesLabel) pagesLabel.childNodes[0].textContent = pagesLabels[this.value] || "Items: ";
     });
   });
 }
@@ -243,7 +269,28 @@ updateRateTypeLabels();
 
 document.getElementById('bulk-type-dropdown').addEventListener('change', function() {
   document.getElementById('bulk-rate-type-label').textContent = rateTypeLabels[this.value] || "items/hr";
+  document.querySelector('.bulk-pages-label').childNodes[0].textContent = bulkPagesLabels[this.value] || "Items: ";
 });
+
+// Multi off days logic
+document.getElementById('add-holiday-btn').onclick = function() {
+  const holidayList = document.getElementById('holiday-list');
+  const newRow = holidayList.firstElementChild.cloneNode(true);
+  newRow.querySelector('.holiday-date').value = "";
+  const removeBtn = newRow.querySelector('.remove-holiday-btn');
+  removeBtn.style.display = 'inline';
+  removeBtn.onclick = function() { newRow.remove(); };
+  holidayList.appendChild(newRow);
+};
+// Allow at least one remove for subsequently added off days
+Array.from(document.querySelectorAll('.remove-holiday-btn')).forEach(btn => {
+  btn.onclick = function() {
+    if (btn.closest('.holiday-input-row').parentNode.childElementCount > 1) {
+      btn.closest('.holiday-input-row').remove();
+    }
+  };
+});
+
 document.getElementById('bulk-confirm-btn').onclick = function() {
   const lines = document.getElementById('bulk-resource-input').value.split('\n').map(x=>x.trim()).filter(x=>x);
   const bulkType = document.getElementById('bulk-type-dropdown').value;
@@ -358,7 +405,7 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
         const isChecked=progress[taskId]?"checked":"";
         tasksArr.push({
           date: day.toLocaleDateString(), sortDate: day.getTime(),
-          resource: `${resourceTypeIcons[types[idx]]} ${resource}`, type: resourceTypeLabels[types[idx]], tag:tags[idx],
+          resource: `${resourceTypeIcons[types[idx]]} ${resource}`, type: resourceTypeLabels[types[idx]], rawType: types[idx], tag:tags[idx],
           pages: assignCount, interval:intervals[idx], id:taskId,
           checked: isChecked, note: noteVal, resNote: resNotes[idx],
           estTime: timeNeeded.toFixed(2)
@@ -379,7 +426,7 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
       <input type="checkbox" class="progress-checkbox" data-task="${item.id}" ${item.checked}>
       <b>${item.date}</b>: ${item.resource} <span style="color:#222;font-size:13px;">(${item.type})</span>
       <span style="color:#297bb7;font-size:13px;"> [${item.tag}]</span>,
-      Assigned: <b>${item.pages}</b> <span style="font-size:13px;">(${rateTypeLabels[item.type]})</span>
+      Assigned: <b>${item.pages}</b> <span style="font-size:13px;">(${rateTypeLabels[item.rawType]})</span>
       <span style="color:#777;">Est: ${item.estTime} hrs</span>
       <span style="color:#777; font-style:italic;">${item.resNote}</span>
       <input type="text" class="note-input" data-task-note="${item.id}" placeholder="Add note..." value="${item.note}">
@@ -388,7 +435,6 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
   scheduleHtml+='</ul>';
   document.getElementById('schedule').innerHTML=scheduleHtml;
 
-  // Drag & drop
   let draggedIdx=null,dragOverIdx=null;
   const list=document.getElementById("draggable-list");
   const items=list?Array.from(list.querySelectorAll('.draggable-item')):[];
@@ -432,13 +478,71 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
   });
 }
 
-// You may need to implement ICS and PDF export logic using libraries like ics.js and jsPDF
+// ---- ICS export ----
 document.getElementById('download-ics-btn').onclick = function() {
-  alert("ICS export will only include incomplete items. (Implement actual ICS download here.)");
+  if (!lastPlanConfig) { alert('No schedule to export!'); return; }
+  const incompleteTasks = [];
+  const progress = loadProgress()[lastPlanConfig.planId] || {};
+  const scheduleDiv = document.getElementById('schedule');
+  scheduleDiv.querySelectorAll('.draggable-item').forEach(item => {
+    const tid = item.getAttribute('data-tid');
+    if (!tid || progress[tid]) return;
+    const label = item.textContent.replace(/\s+/g, ' ').trim();
+    // Try to extract a date from the label
+    const dateMatch = label.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}/);
+    const dateStr = dateMatch ? dateMatch[0] : null;
+    if (!dateStr) return;
+    let [month,day,year] = dateStr.split('/').map(Number);
+    if (year < 100) year += 2000;
+    // Create an ICS event for this task (all-day)
+    incompleteTasks.push(`BEGIN:VEVENT
+SUMMARY:${label.replace(/^\d{1,2}\/\d{1,2}\/\d{2,4}:\s*/, '')}
+DTSTART;VALUE=DATE:${year}${String(month).padStart(2,'0')}${String(day).padStart(2,'0')}
+DTEND;VALUE=DATE:${year}${String(month).padStart(2,'0')}${String(day+1).padStart(2,'0')}
+END:VEVENT`);
+  });
+  // ICS file scaffold
+  const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+${incompleteTasks.join('\n')}
+END:VCALENDAR`;
+  // Download file
+  const blob = new Blob([icsContent], { type: 'text/calendar' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'study_schedule.ics';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{document.body.removeChild(a); URL.revokeObjectURL(url);}, 100);
 };
-document.getElementById('download-pdf-btn').onclick = function() {
-  window.print();
+
+// ---- CSV Export ----
+document.getElementById('download-csv-btn').onclick = function() {
+  if (!lastPlanConfig) { alert('No schedule to export!'); return; }
+  let csv = 'Date,Resource,Type,Tag,Assigned,Note\n';
+  const progress = loadProgress()[lastPlanConfig.planId] || {};
+  document.querySelectorAll('.draggable-item').forEach(item => {
+    const tid = item.getAttribute('data-tid');
+    // Skip completed
+    if (!tid || progress[tid]) return;
+    const date = item.querySelector('b') ? item.querySelector('b').innerText.trim() : '';
+    const resource = item.querySelector('span:nth-of-type(2)') ? item.querySelector('span:nth-of-type(2)').innerText.trim() : '';
+    const type = item.querySelector('span:nth-of-type(3)') ? item.querySelector('span:nth-of-type(3)').innerText.replace(/[\(\)]/g,'').trim() : '';
+    const tag = item.querySelector('span:nth-of-type(4)') ? item.querySelector('span:nth-of-type(4)').innerText.replace(/[\[\]]/g,'').trim() : '';
+    const assigned = (item.innerText.match(/Assigned: (\d+)/)||[])[1] || '';
+    const note = item.querySelector('input[type=text]') ? item.querySelector('input[type=text]').value.replace(/,/g,';') : '';
+    csv += [date, resource, type, tag, assigned, note].map(x=>`"${x}"`).join(',')+'\n';
+  });
+  const blob = new Blob([csv], {type: 'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'study_schedule.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{document.body.removeChild(a); URL.revokeObjectURL(url);}, 100);
 };
+
+// Print/PDF: hides everything except the #schedule container
+document.getElementById('download-pdf-btn').onclick = function() { window.print(); };
 
 function saveProgress(progress, notes, manualOrder) {
   localStorage.setItem('studyProgress', JSON.stringify(progress));
@@ -479,6 +583,7 @@ document.getElementById('restore-file').onchange = function(evt) {
   };
   if(file)reader.readAsText(file);
 };
+
 </script>
 </body>
 </html>
