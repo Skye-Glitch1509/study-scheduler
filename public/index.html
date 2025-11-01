@@ -4,126 +4,43 @@
   <title>Study Scheduler</title>
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css?family=Inter:400,500,600,700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.3/dist/chart.umd.min.js"></script>
   <style>
-    :root {
-      --bg: #f7fafc; --card: #fff; --main: #2562cf;
-      --accent: #e5eaf1; --text: #232c40; --border: #e2e8f0;
-      --primary-btn: #2562cf; --primary-btn-hover: #1e4fab; --shadow: 0 2px 14px #23262f10;
-      --dark-bg: #21263b; --dark-card: #272a38; --dark-main: #c0cefa; --dark-accent: #23262f;
-      --dark-text: #e0e7fa; --dark-border: #323648;
-      --high: #fa3939; --med: #fabf3a; --low: #7ed957;
-      --dark-high:#ff7070; --dark-med: #ffe159; --dark-low: #a3ddb8;
+    body { font-family: 'Inter', Arial, sans-serif; background: #f7fafc; color: #232c40; margin:0; }
+    .dashboard-layout{display:flex;flex-direction:row;gap:22px;}
+    .sidebar-tabnav{min-width:120px;background:#e5eaf1;padding:15px 10px 5px 10px; border-radius:13px;box-shadow:0 1px 6px #23262f19;display:flex;flex-direction:column;gap:10px;}
+    .sidebar-tabnav button{background:none;color:#2562cf;border:none;margin:8px 0;padding:7px 11px;font-weight:600;font-size:1.03em;border-radius:7px;cursor:pointer;transition:background .14s;}
+    .sidebar-tabnav button.active,
+    .sidebar-tabnav button:focus{background:#2562cf;color:#fff;}
+    .section-panel{flex:1;padding:0;min-width:240px;}
+    #calendar-view{max-width:800px;margin:auto;}
+    #chart-view{max-width:410px;margin:auto;}
+    #gantt-view{max-width:720px;margin:auto;}
+    @media (max-width:900px){
+      .dashboard-layout{flex-direction:column;}
+      .sidebar-tabnav{flex-direction:row;min-width:0;gap:7px;}
+      #calendar-view,#gantt-view{max-width:99vw;}
     }
-    html { box-sizing: border-box; }
-    *, *:before, *:after { box-sizing: inherit; }
-    body {
-      font-family: 'Inter', Arial, sans-serif; background: var(--bg); color: var(--text);
-      min-height: 100vh; transition: background .2s, color .2s;
-      margin: 0;
-      padding: 0;
-      font-size: 16px;
-    }
-    body.dark {background: var(--dark-bg); color: var(--dark-text);}
-    h1 { font-size: 2.1em; color: var(--main); font-weight:700; letter-spacing:-0.7px; margin-bottom:8px;}
-    .app-header { display: flex; align-items:center; justify-content:space-between; margin-bottom:8px; margin-top:8px;}
-    #darkmode-btn { border:none; background: var(--accent); color: var(--main); width:38px; height:38px; font-size:23px;
-      border-radius:50%; cursor:pointer; transition:.17s; margin-left:13px; margin-bottom:2px; }
-    body.dark #darkmode-btn { background:var(--dark-accent); color:var(--dark-main);}
-    .card {background: var(--card); box-shadow: var(--shadow); border-radius:16px; border: 1px solid var(--border);
-      padding: 13px 20px 10px 17px; margin-bottom:12px; transition: background .2s, border .2s, color .2s;}
-    body.dark .card {background: var(--dark-card); border-color: var(--dark-border);}
-    .card-row { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:7px;}
-    .card-row label {font-weight:500;margin-right:7px;}
-    .card-row input, .card-row select { background: var(--accent); border-radius:7px; border: 1px solid var(--border); font-size:15px; padding:9px 8px;}
-    body.dark .card-row input, body.dark .card-row select { background: var(--dark-accent); color: var(--dark-text); border-color: var(--dark-border);}
-    .card-row .remove-btn {background:transparent;color:#bc2d2d;border:none;font-size:1.2em; cursor:pointer;}
-    .card-row .remove-btn:hover {text-decoration:underline;}
-    button, input[type="button"] {
-      font-family: 'Inter', Arial, sans-serif; background: var(--primary-btn); color: #fff; border:none; border-radius:8px; font-size:1.09em;
-      padding: 14px 20px; margin: 6px 6px 14px 0; box-shadow: 0 1px 8px #2562cf12; transition: background .15s, box-shadow .2s;
-      font-weight:600; letter-spacing:-0.03em; cursor:pointer;}
-    button:focus { outline: 2px solid var(--main); }
-    button:hover, input[type="button"]:hover {background: var(--primary-btn-hover); box-shadow: 0 2px 20px #2562cf2a;}
-    #bulk-modal-inner {background: var(--card);}
-    body.dark #bulk-modal-inner {background: var(--dark-card);}
-    .weekday-checkboxes label {font-weight:500;margin-right:13px;}
-    #schedule, .draggable-item {font-size:1em;}
-    ul#draggable-list { padding: 0; margin:0;}
-    .draggable-item {
-      background: var(--card);
-      box-shadow: var(--shadow);
-      border-radius:9px;
-      border: 1.4px solid var(--border);
-      margin-bottom:13px;
-      padding: 12px 8px;
-      display: flex;
-      align-items:center;
-      transition: background .2s, box-shadow .15s;
-      position: relative;
-      touch-action: pan-y;
-      user-select: none;
-    }
-    body.dark .draggable-item {background:var(--dark-card); border-color:var(--dark-border);}
-    .draggable-item:focus {outline: 2px solid var(--main);}
-    .draggable-item.drop-target {background: #e5f2ff;}
-    body.dark .draggable-item.drop-target {background: #2562cf19;}
-    .drag-indicator {font-size:1.3em; color:#888; cursor:grab;margin-right:12px;}
-    .progress-checkbox { accent-color: var(--main); width:19px; height:19px; margin-right:9px;}
-    .note-input, .resource-tag, .resource-note {font-size:15px;}
-    .priority-high { border-left:6px solid var(--high);}
-    .priority-medium { border-left:6px solid var(--med);}
-    .priority-low { border-left:6px solid var(--low);}
-    body.dark .priority-high { border-left:6px solid var(--dark-high);}
-    body.dark .priority-medium { border-left:6px solid var(--dark-med);}
-    body.dark .priority-low { border-left:6px solid var(--dark-low);}
-    .priority-label {
-      font-weight:700;
-      font-size: .99em;
-      display: inline-block;
-      margin-right: 8px;
-    }
-    .priority-label.high { color:var(--high);}
-    .priority-label.medium { color:var(--med);}
-    .priority-label.low { color:var(--low);}
-    .draggable-item .del-btn {
-      position:absolute;
-      right:15px;
-      top:15px;
-      color:#bc2d2d;background:none;
-      border:none;cursor:pointer;
-      font-size:1.3em;
-      z-index:2;
-      opacity:0.7;
-    }
-    .draggable-item .del-btn:focus {outline:2px solid var(--main);}
-    .draggable-item .del-btn:active {opacity:1;}
-    @media (max-width:820px){
-      .card-row { flex-direction: column; align-items:stretch; gap:10px; }
-      .app-header {flex-direction:column;gap:8px;}
-      ul#draggable-list{margin:0;}
-      .draggable-item{padding:9px 4px;}
-      button,input[type="button"]{padding:12px 13px}
-    }
-    @media (max-width:500px){
-      .card{border-radius:8px;padding: 8px 6px 5px 6px;}
-      .draggable-item{padding:6px;}
-      label, .priority-label{font-size:.97em;}
-      h1{font-size:1.2em;}
-      .app-header{padding-left:3px;}
-      button,input[type="button"]{padding:12px 6px;}
-      input,select{font-size:1em;}
-      .note-input{font-size:.97em;}
-    }
-    #bulk-modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.16); z-index:1500;}
-    #bulk-modal-inner { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-      min-width:320px; min-height:250px;}
-    .accessibility-btn { background: var(--main); color: #fff; font-size: 1.05em; margin-bottom: 8px; }
-    @media print {
-      body > *:not(#schedule) { display: none !important; }
-      #schedule { display: block !important; margin: 0 !important; }
-      #schedule ul { margin: 0 !important; }
-      #schedule h2 { margin-top: 0 !important; }
-    }
+    .app-header { display: flex; align-items:center; justify-content:space-between; margin:12px 0 9px 0;}
+    #darkmode-btn { border:none; background: #e5eaf1; color: #2562cf; width:38px; height:38px; font-size:23px;
+      border-radius:50%; cursor:pointer; margin-left:13px;margin-bottom:2px;}
+    .card{background:#fff;box-shadow:0 2px 14px #23262f10; border-radius:16px; border:1px solid #e2e8f0;padding:13px 20px 10px 17px;margin-bottom:12px;}
+    .card-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center; margin-bottom:7px;}
+    .card-row label{font-weight:500;margin-right:7px;}
+    .draggable-item{ background:#fff; box-shadow:0 2px 14px #23262f10; border-radius:9px; border:1.4px solid #e2e8f0; margin-bottom:13px; padding:12px 8px; display:flex; align-items:center; transition:background .2s,box-shadow .15s; position:relative; touch-action:pan-y; user-select:none;}
+    .priority-high { border-left:6px solid #fa3939;}
+    .priority-medium { border-left:6px solid #fabf3a;}
+    .priority-low { border-left:6px solid #7ed957;}
+    .priority-label{font-weight:700;font-size:.99em;display:inline-block;margin-right:8px;}
+    .priority-label.high { color:#fa3939;}
+    .priority-label.medium { color:#fabf3a;}
+    .priority-label.low { color:#7ed957;}
+    .draggable-item .del-btn { position:absolute;right:15px;top:15px;color:#bc2d2d;background:none;border:none;cursor:pointer;font-size:1.3em;z-index:2;}
+    @media (max-width:900px){.card-row{flex-direction:column;align-items:stretch;gap:7px;}.app-header{flex-direction:column;gap:8px;}}
+    @media (max-width:500px){.card{border-radius:8px;padding:8px 6px 5px 6px;}.draggable-item{padding:6px;}label,.priority-label{font-size:.97em;}h1{font-size:1.2em;}.app-header{padding-left:3px;}button,input[type="button"]{padding:12px 6px;}}
+    @media print { body > *:not(#schedule) { display: none !important; } #schedule { display: block !important; margin: 0 !important; } #schedule ul { margin: 0 !important; } #schedule h2 { margin-top: 0 !important; } }
   </style>
 </head>
 <body>
@@ -131,169 +48,121 @@
   <h1>Study Scheduler</h1>
   <button id="darkmode-btn" aria-label="Toggle dark mode">🌙</button>
 </div>
-<form id="study-form" style="display:block;">
-  <div class="card card-row">
-    <label>Study hours per day:
-      <input type="number" id="study-hours-per-day" min="1" max="24" value="3" style="width:72px;">
-    </label>
-  </div>
-  <div id="resource-list">
-    <div class="card card-row resource-row">
-      <label>Resource: <input type="text" class="resource" required></label>
-      <label class="resource-pages-label">Pages: <input type="number" class="pages" required style="width:70px;"></label>
-      <label>Type:
-        <select class="resource-type-dropdown">
-          <option value="book">📚 Book</option>
-          <option value="qbank">❓ QBank</option>
-          <option value="flashcards">🃏 Flashcards</option>
-          <option value="video">📺 Video</option>
-          <option value="other">📄 Other</option>
-        </select>
-      </label>
-      <label>
-        Rate per hour: <input type="number" class="rate-per-hour" min="1" value="10" style="width:70px;">
-        <span class="rate-type-label">pages/hr</span>
-      </label>
-      <label>
-        Priority:
-        <select class="priority-dropdown">
-          <option value="high">High ⭐</option>
-          <option value="medium" selected>Medium</option>
-          <option value="low">Low</option>
-        </select>
-      </label>
-      <label>Tag: <input type="text" class="resource-tag" placeholder="Tag" style="width:90px;"></label>
-      <label>Note: <input type="text" class="resource-note" placeholder="Note" style="width:120px;"></label>
-      <label>
-        Interval:
-        <select class="interval-dropdown" style="width:87px;">
-          <option value="1">Every day</option>
-          <option value="2">Every other day</option>
-          <option value="3">Every 3rd day</option>
-          <option value="7">Every week</option>
-        </select>
-      </label>
-      <button type="button" class="remove-btn" style="display:none;">✖</button>
-    </div>
-  </div>
-  <button type="button" id="add-resource-btn">Add Resource</button>
-  <button type="button" id="bulk-add-btn">Bulk Add</button>
-  <br>
-  <div class="card card-row weekday-checkboxes">
-    <label><input type="checkbox" class="weekday" value="0" checked> Sun</label>
-    <label><input type="checkbox" class="weekday" value="1" checked> Mon</label>
-    <label><input type="checkbox" class="weekday" value="2" checked> Tue</label>
-    <label><input type="checkbox" class="weekday" value="3" checked> Wed</label>
-    <label><input type="checkbox" class="weekday" value="4" checked> Thu</label>
-    <label><input type="checkbox" class="weekday" value="5" checked> Fri</label>
-    <label><input type="checkbox" class="weekday" value="6" checked> Sat</label>
-  </div>
-  <div class="card card-row" id="rest-days-container">
-    <b>Rest/Off Dates:</b>
-    <div id="holiday-list" style="margin-left:10px;">
-      <div class="holiday-input-row">
-        <input type="date" class="holiday-date">
-        <button type="button" class="remove-holiday-btn" style="display:none;">✖</button>
+<div class="dashboard-layout">
+  <nav class="sidebar-tabnav" aria-label="Main navigation">
+    <button id="nav-list" class="active">List</button>
+    <button id="nav-calendar">Calendar</button>
+    <button id="nav-gantt">Gantt</button>
+    <button id="nav-analytics">Analytics</button>
+  </nav>
+  <main id="main-panels">
+    <section id="list-view" class="section-panel">
+      <form id="study-form">
+        <div class="card card-row">
+          <label>Study hours per day: <input type="number" id="study-hours-per-day" min="1" max="24" value="3" style="width:72px;"></label>
+        </div>
+        <div id="resource-list">
+          <div class="card card-row resource-row">
+            <label>Resource: <input type="text" class="resource" required></label>
+            <label class="resource-pages-label">Pages: <input type="number" class="pages" required style="width:70px;"></label>
+            <label>Type:
+              <select class="resource-type-dropdown">
+                <option value="book">📚 Book</option>
+                <option value="qbank">❓ QBank</option>
+                <option value="flashcards">🃏 Flashcards</option>
+                <option value="video">📺 Video</option>
+                <option value="other">📄 Other</option>
+              </select>
+            </label>
+            <label>
+              Rate per hour: <input type="number" class="rate-per-hour" min="1" value="10" style="width:70px;">
+              <span class="rate-type-label">pages/hr</span>
+            </label>
+            <label>
+              Priority:
+              <select class="priority-dropdown">
+                <option value="high">High ⭐</option>
+                <option value="medium" selected>Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </label>
+            <label>Tag: <input type="text" class="resource-tag" placeholder="Tag" style="width:90px;"></label>
+            <label>Note: <input type="text" class="resource-note" placeholder="Note" style="width:120px;"></label>
+            <label>
+              Interval:
+              <select class="interval-dropdown" style="width:87px;">
+                <option value="1">Every day</option>
+                <option value="2">Every other day</option>
+                <option value="3">Every 3rd day</option>
+                <option value="7">Every week</option>
+              </select>
+            </label>
+            <button type="button" class="remove-btn" style="display:none;">✖</button>
+          </div>
+        </div>
+        <button type="button" id="add-resource-btn">Add Resource</button>
+        <br>
+        <div class="card card-row weekday-checkboxes">
+          <label><input type="checkbox" class="weekday" value="0" checked> Sun</label>
+          <label><input type="checkbox" class="weekday" value="1" checked> Mon</label>
+          <label><input type="checkbox" class="weekday" value="2" checked> Tue</label>
+          <label><input type="checkbox" class="weekday" value="3" checked> Wed</label>
+          <label><input type="checkbox" class="weekday" value="4" checked> Thu</label>
+          <label><input type="checkbox" class="weekday" value="5" checked> Fri</label>
+          <label><input type="checkbox" class="weekday" value="6" checked> Sat</label>
+        </div>
+        <div class="card card-row" id="rest-days-container">
+          <b>Rest/Off Dates:</b>
+          <div id="holiday-list" style="margin-left:10px;">
+            <div class="holiday-input-row">
+              <input type="date" class="holiday-date">
+              <button type="button" class="remove-holiday-btn" style="display:none;">✖</button>
+            </div>
+          </div>
+          <button type="button" id="add-holiday-btn">Add Off Date</button>
+        </div>
+        <div class="card card-row" id="review-days-container">
+          <b>Periodic Review:</b>
+          <label>
+            Every
+            <select id="review-dropdown">
+              <option value="0">None</option>
+              <option value="7">7th day</option>
+              <option value="6">6th day</option>
+              <option value="5">5th day</option>
+              <option value="4">4th day</option>
+              <option value="3">3rd day</option>
+              <option value="2">2nd day</option>
+            </select>
+            is Review/Rest
+          </label>
+        </div>
+        <div class="card card-row">
+          <label>Start Date: <input type="date" id="start-date" required></label>
+          <label>End Date: <input type="date" id="end-date" required></label>
+          <button type="submit" style="margin-left:14px;">Create Schedule</button>
+        </div>
+      </form>
+      <div>
+        <button type="button" id="download-csv-btn">Export CSV</button>
+        <button type="button" id="download-ics-btn">Export Calendar (.ics)</button>
+        <button type="button" id="download-pdf-btn">Print/PDF</button>
+        <button type="button" id="backup-btn">Backup JSON</button>
+        <button type="button" id="restore-btn">Restore JSON</button>
+        <input type="file" id="restore-file" style="display:none;">
       </div>
-    </div>
-    <button type="button" id="add-holiday-btn">Add Off Date</button>
-  </div>
-  <div class="card card-row" id="review-days-container">
-    <b>Periodic Review:</b>
-    <label>
-      Every
-      <select id="review-dropdown">
-        <option value="0">None</option>
-        <option value="7">7th day</option>
-        <option value="6">6th day</option>
-        <option value="5">5th day</option>
-        <option value="4">4th day</option>
-        <option value="3">3rd day</option>
-        <option value="2">2nd day</option>
-      </select>
-      is Review/Rest
-    </label>
-  </div>
-  <div class="card card-row">
-    <label>Start Date: <input type="date" id="start-date" required></label>
-    <label>End Date: <input type="date" id="end-date" required></label>
-    <button type="submit" style="margin-left:14px;">Create Schedule</button>
-  </div>
-</form>
-<div>
-  <button type="button" id="download-csv-btn">Export CSV</button>
-  <button type="button" id="download-ics-btn">Export Calendar (.ics)</button>
-  <button type="button" id="download-pdf-btn">Print/PDF</button>
-  <button type="button" id="backup-btn">Backup JSON</button>
-  <button type="button" id="restore-btn">Restore JSON</button>
-  <input type="file" id="restore-file" style="display:none;">
-</div>
-<div id="progress-label"></div>
-<button type="button" id="rebalance-btn" style="display:none;">Rebalance</button>
-<button type="button" id="adv-rebalance-btn" style="display:none;">Advanced Rebalance</button>
-<div id="schedule"></div>
-<!-- Bulk Modal -->
-<div id="bulk-modal">
-  <div id="bulk-modal-inner" class="card">
-    <h2>Bulk Add Resources</h2>
-    <div><textarea id="bulk-resource-input" rows="10" style="width:98%;background:var(--accent);"></textarea></div>
-    <br>
-    <label>Type:
-      <select id="bulk-type-dropdown">
-        <option value="book">📚 Book</option>
-        <option value="qbank">❓ QBank</option>
-        <option value="flashcards">🃏 Flashcards</option>
-        <option value="video">📺 Video</option>
-        <option value="other">📄 Other</option>
-      </select>
-    </label>
-    <label>Rate/hour: <input type="number" id="bulk-rate-input" min="1" value="10" style="width:70px;">
-      <span id="bulk-rate-type-label">pages/hr</span>
-    </label>
-    <label>
-      Priority:
-      <select id="bulk-priority-dropdown">
-        <option value="high">High ⭐</option>
-        <option value="medium" selected>Medium</option>
-        <option value="low">Low</option>
-      </select>
-    </label>
-    <label>Tag: <input type="text" id="bulk-tag-input" placeholder="Tag"></label>
-    <label>Note: <input type="text" id="bulk-note-input" placeholder="Note"></label>
-    <label class="bulk-pages-label">
-      Pages/Items:
-      <input type="number" id="bulk-pages-input" min="1" value="10" style="width:60px;">
-    </label>
-    <br><br>
-    <button id="bulk-confirm-btn">Add Resources</button>
-    <button id="bulk-cancel-btn">Cancel</button>
-  </div>
+      <div id="schedule"></div>
+    </section>
+    <section id="calendar-view" class="section-panel" style="display:none;"></section>
+    <section id="gantt-view" class="section-panel" style="display:none;"></section>
+    <section id="chart-view" class="section-panel" style="display:none;">
+      <canvas id="analytics-chart" style="max-width:380px;"></canvas>
+      <div id="analytics-summary" style="max-width:380px;margin:14px 0 0 0;"></div>
+    </section>
+  </main>
 </div>
 <script>
-const resourceTypeIcons = {
-  book: "📚", qbank: "❓", flashcards: "🃏", video: "📺", other: "📄"
-};
-const resourceTypeLabels = {
-  book: "Book", qbank: "QBank", flashcards: "Flashcards", video: "Video", other: "Other"
-};
-const rateTypeLabels = {
-  book: "pages/hr", qbank: "questions/hr", flashcards: "cards/hr", video: "videos/hr", other: "items/hr"
-};
-const pagesLabels = {
-  book: "Pages: ",
-  qbank: "Questions: ",
-  flashcards: "Cards: ",
-  video: "Videos: ",
-  other: "Items: "
-};
-const bulkPagesLabels = {
-  book: "Pages/Items: ",
-  qbank: "Questions/Items: ",
-  flashcards: "Cards/Items: ",
-  video: "Videos/Items: ",
-  other: "Items: "
-};
-
+/* Dark mode and tab navigation logic */
 const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 function autoSetDarkMode() {
   const useDark = darkModeQuery.matches || localStorage.getItem('darkOverride') === '1';
@@ -308,24 +177,36 @@ document.getElementById('darkmode-btn').onclick = function() {
   autoSetDarkMode();
 };
 
+function showPanel(panel){
+  Array.from(document.querySelectorAll('.section-panel')).forEach(sec=>sec.style.display='none');
+  document.getElementById(`${panel}-view`).style.display='';
+  Array.from(document.querySelectorAll('.sidebar-tabnav button')).forEach(btn=>btn.classList.remove('active'));
+  document.getElementById(`nav-${panel}`).classList.add('active');
+}
+document.getElementById('nav-list').onclick=()=>showPanel('list');
+document.getElementById('nav-calendar').onclick=()=>{showPanel('calendar');renderAllViews();};
+document.getElementById('nav-gantt').onclick=()=>{showPanel('gantt');renderAllViews();};
+document.getElementById('nav-analytics').onclick=()=>{showPanel('chart');renderAnalyticsChart();};
+
+/* --- Scheduler Data and Utility Functions --- */
+const resourceTypeIcons = {book:"📚", qbank:"❓", flashcards:"🃏", video:"📺", other:"📄"};
+const resourceTypeLabels = {book:"Book",qbank:"QBank",flashcards:"Flashcards",video:"Video",other:"Other"};
+const rateTypeLabels = {book:"pages/hr",qbank:"questions/hr",flashcards:"cards/hr",video:"videos/hr",other:"items/hr"};
+const pagesLabels = {book:"Pages: ",qbank:"Questions: ",flashcards:"Cards: ",video:"Videos: ",other:"Items: "};
+
 function updateRateTypeLabels() {
   document.querySelectorAll('.resource-row').forEach(row => {
     const typeSel = row.querySelector('.resource-type-dropdown');
     const rateLabel = row.querySelector('.rate-type-label');
     const pagesLabel = row.querySelector('.resource-pages-label');
-    if (typeSel && rateLabel) {
-      rateLabel.textContent = rateTypeLabels[typeSel.value] || "items/hr";
-    }
-    if (typeSel && pagesLabel) {
-      pagesLabel.childNodes[0].textContent = pagesLabels[typeSel.value] || "Items: ";
-    }
+    if (typeSel && rateLabel) rateLabel.textContent = rateTypeLabels[typeSel.value] || "items/hr";
+    if (typeSel && pagesLabel) pagesLabel.childNodes[0].textContent = pagesLabels[typeSel.value] || "Items: ";
     typeSel.addEventListener('change', function() {
       rateLabel.textContent = rateTypeLabels[this.value] || "items/hr";
       if (pagesLabel) pagesLabel.childNodes[0].textContent = pagesLabels[this.value] || "Items: ";
     });
   });
 }
-
 function addResourceRow(resourceVal="", pagesVal="", typeVal="book", tagVal="", noteVal="", intervalVal="1", rateVal="10", priorityVal="medium") {
   const resourceList = document.getElementById('resource-list');
   const newRow = resourceList.firstElementChild.cloneNode(true);
@@ -344,18 +225,8 @@ function addResourceRow(resourceVal="", pagesVal="", typeVal="book", tagVal="", 
   resourceList.appendChild(newRow);
   updateRateTypeLabels();
 }
-
-document.getElementById('add-resource-btn').addEventListener('click', function() {
-  addResourceRow();
-  updateRateTypeLabels();
-});
+document.getElementById('add-resource-btn').addEventListener('click', function() { addResourceRow(); updateRateTypeLabels(); });
 updateRateTypeLabels();
-
-document.getElementById('bulk-type-dropdown').addEventListener('change', function() {
-  document.getElementById('bulk-rate-type-label').textContent = rateTypeLabels[this.value] || "items/hr";
-  document.querySelector('.bulk-pages-label').childNodes[0].textContent = bulkPagesLabels[this.value] || "Items: ";
-});
-
 document.getElementById('add-holiday-btn').onclick = function() {
   const holidayList = document.getElementById('holiday-list');
   const newRow = holidayList.firstElementChild.cloneNode(true);
@@ -366,34 +237,8 @@ document.getElementById('add-holiday-btn').onclick = function() {
   holidayList.appendChild(newRow);
 };
 Array.from(document.querySelectorAll('.remove-holiday-btn')).forEach(btn => {
-  btn.onclick = function() {
-    if (btn.closest('.holiday-input-row').parentNode.childElementCount > 1) {
-      btn.closest('.holiday-input-row').remove();
-    }
-  };
+  btn.onclick = function() { if (btn.closest('.holiday-input-row').parentNode.childElementCount > 1) btn.closest('.holiday-input-row').remove(); };
 });
-document.getElementById('bulk-confirm-btn').onclick = function() {
-  const lines = document.getElementById('bulk-resource-input').value.split('\n').map(x=>x.trim()).filter(x=>x);
-  const bulkType = document.getElementById('bulk-type-dropdown').value;
-  const bulkTag = document.getElementById('bulk-tag-input').value;
-  const bulkNote = document.getElementById('bulk-note-input').value;
-  const bulkPages = parseInt(document.getElementById('bulk-pages-input').value, 10) || 1;
-  const bulkRate = parseInt(document.getElementById('bulk-rate-input').value, 10) || 10;
-  const bulkPriority = document.getElementById('bulk-priority-dropdown').value;
-  if (!lines.length) { alert("Paste at least one resource"); return; }
-  lines.forEach(name=>{
-    addResourceRow(name, bulkPages, bulkType, bulkTag, bulkNote, "1", bulkRate, bulkPriority);
-  });
-  document.getElementById('bulk-modal').style.display = 'none';
-};
-document.getElementById('bulk-cancel-btn').onclick = function() {
-  document.getElementById('bulk-modal').style.display = 'none';
-};
-document.getElementById('bulk-add-btn').addEventListener('click', function() {
-  document.getElementById('bulk-resource-input').value = '';
-  document.getElementById('bulk-modal').style.display = 'block';
-});
-
 function getSelectedWeekdays() {
   return Array.from(document.querySelectorAll('.weekday')).filter(cb => cb.checked).map(cb => parseInt(cb.value));
 }
@@ -415,7 +260,6 @@ function getScheduleDays(startDate, endDate, weekDays, skipDatesArr) {
     dt.setDate(dt.getDate() + 1); }
   return days;
 }
-
 document.getElementById('study-form').addEventListener('submit',function(event){
   event.preventDefault();
   const resourceNames = Array.from(document.querySelectorAll('.resource')).map(input=>input.value);
@@ -433,22 +277,18 @@ document.getElementById('study-form').addEventListener('submit',function(event){
   const reviewDayInterval = parseInt(document.getElementById('review-dropdown').value, 10) || 0;
   const skipDatesArr = getRestDays(startDate, endDate, reviewDayInterval);
   const scheduleDays = getScheduleDays(startDate, endDate, weekDays, skipDatesArr);
-
   const planId = `${startDate.toISOString().slice(0,10)}_${endDate.toISOString().slice(0,10)}_${resourceNames.join('_')}_${weekDays.join('-')}_${skipDatesArr.join('-')}_${intervals.join('-')}`;
   window.lastPlanConfig = {resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes, ratePerHour, priorities, studyHoursPerDay};
   window.lastScheduleDays = scheduleDays;
   const progress = loadProgress()[planId]||{};
   renderSchedule(window.lastPlanConfig,progress,false,resourceTypes,skipDatesArr);
+  renderAllViews();
 });
 
-// Enhanced renderSchedule with drag/drop and mobile swipe and accessibility
 function renderSchedule(planConfig, progress, rebalance = false, resourceTypesArg=null, skipDatesArr=null) {
   const { resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes, resourceTags, resourceNotes, ratePerHour, priorities, studyHoursPerDay } = planConfig;
   const numDays = scheduleDays.length;
-  let remainingItems = pageCounts.slice();
-  let doneItems = resourceNames.map((res, idx) => 0);
   let notes = loadNotes()[planId] || {};
-  let manualOrder = loadManualOrder();
   let types = resourceTypesArg || resourceTypes || [];
   let tags = resourceTags || Array(resourceNames.length).fill("");
   let resNotes = resourceNotes || Array(resourceNames.length).fill("");
@@ -470,15 +310,11 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
     }
     let timeLeft = studyHoursPerDay;
     resourceNames.forEach((resource,idx)=>{
-      let itemsTotal=rebalance?remainingItems[idx]:pageCounts[idx];
       let arr=daysIdxArrList[idx];
       if(arr.includes(i)){
-        let undoneDays=arr.length-(rebalance?countDaysDone(progress,planId,resource,arr):0);
-        let maxAssignable = Math.min(itemsTotal - doneItems[idx], Math.floor(ratePerHour[idx] * timeLeft));
-        let assignCount = Math.ceil(itemsTotal/arr.length);
-        if (assignCount > maxAssignable) assignCount = maxAssignable;
-        assignCount = Math.max(assignCount, 1);
-        timeLeft -= assignCount / ratePerHour[idx];
+        let assignCount = Math.ceil(pageCounts[idx]/arr.length);
+        let timeNeeded = assignCount / ratePerHour[idx];
+        timeLeft -= timeNeeded;
         const taskId=`${planId}_${resource}_${i}`;
         const noteVal=notes[taskId]?notes[taskId]:'';
         const isChecked=progress[taskId]?"checked":"";
@@ -498,15 +334,12 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
     if (!groupedByDate[task.date]) groupedByDate[task.date] = [];
     groupedByDate[task.date].push(task);
   });
-  let allDates = Object.keys(groupedByDate).sort((a,b)=> {
-    try { return new Date(a) - new Date(b); } catch { return a.localeCompare(b);}
-  });
+  let allDates = Object.keys(groupedByDate).sort((a,b)=> new Date(a) - new Date(b));
   let displayArr = [];
   allDates.forEach(d => {
     let arr = groupedByDate[d];
     displayArr = displayArr.concat(arr.sort((a,b)=> (prioSortOrder[a.priority||"medium"] - prioSortOrder[b.priority||"medium"])));
   });
-
   let scheduleHtml='<h2>Study Schedule</h2><ul id="draggable-list">';
   displayArr.forEach((item,idx)=>{
     if (item.resource === "Rest/Review Day") {
@@ -532,12 +365,11 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
   scheduleHtml+='</ul>';
   document.getElementById('schedule').innerHTML=scheduleHtml;
 
-  // Attach drag & drop, touch, keyboard, and accessibility handlers
   setTimeout(()=>{
     let items=Array.from(document.querySelectorAll('.draggable-item'));
     items.forEach((item, idx)=>{
       let touchstartX=0, touchendX=0;
-      item.addEventListener('dragstart',(e)=>{item.classList.add("dragging"); e.dataTransfer.effectAllowed='move';});
+      item.addEventListener('dragstart',(e)=>{item.classList.add("dragging");});
       item.addEventListener('dragend',(e)=>{item.classList.remove("dragging");});
       item.addEventListener('dragover',e=>{e.preventDefault(); item.classList.add('drop-target');});
       item.addEventListener('dragleave',e=>{item.classList.remove('drop-target');});
@@ -568,6 +400,7 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
         saveData[planConfig.planId][this.dataset.task]=this.checked?true:false;
         saveProgress(saveData,saveNotes,manualOrder);
         renderSchedule(planConfig,saveData[planConfig.planId],rebalance,types,skipArr);
+        renderAllViews();
       });
     });
     document.querySelectorAll('.note-input').forEach(noteInput=>{
@@ -580,8 +413,116 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
     });
   },30);
 }
+function extractScheduleArrFromModel() {
+  let arr=[];
+  if(window.lastPlanConfig){
+    let plan=window.lastPlanConfig;
+    let progress=loadProgress()[plan.planId]||{};
+    (plan.scheduleDays||[]).forEach((dayObj,i)=>{
+      plan.resourceNames.forEach((name,ri)=>{
+        arr.push({
+          resource: name,
+          date: dayObj.toLocaleDateString(),
+          dateObj: new Date(dayObj),
+          pages: plan.pageCounts[ri],
+          priority: plan.priorities ? plan.priorities[ri] : 'medium',
+          checked: progress[`${plan.planId}_${name}_${i}`]||false
+        });
+      });
+    });
+  }
+  window.currentScheduleArr = arr;
+  return arr;
+}
+function renderAllViews() {
+  let schedArr = extractScheduleArrFromModel();
+  renderCalendar(schedArr);
+  renderGantt(schedArr);
+  window.currentScheduleArr = schedArr;
+}
+function renderCalendar(schedule) {
+  const calDiv = document.getElementById('calendar-view');
+  calDiv.innerHTML = '<div id="study-calendar"></div>';
+  let events = [];
+  (schedule||[]).forEach(task=>{
+    if(task.resource && !task.checked) {
+      events.push({
+        title: task.resource + ' (' + task.pages + ')',
+        start: task.dateObj,
+        allDay: true,
+        color: task.priority==='high'?'#fa3939':task.priority==='medium'?'#fabf3a':'#7ed957'
+      });
+    }
+  });
+  let calendar = new FullCalendar.Calendar(calDiv.querySelector('#study-calendar'),{
+    initialView:'dayGridMonth',
+    events:events,
+    height:530,
+    editable:true,
+    eventClick:function(info){
+      alert(info.event.title + " on " + info.event.startStr);
+    }
+  });
+  calendar.render();
+}
+function renderGantt(schedule) {
+  const container = document.getElementById('gantt-view');
+  let html = '<h2>Gantt Timeline</h2><div style="max-width:650px;">';
+  let tasks = (schedule||[]).filter(x=>x.resource && !x.checked);
+  let resources = Array.from(new Set(tasks.map(x=>x.resource)));
+  resources.forEach(resource=>{
+    let barTasks = tasks.filter(x=>x.resource===resource);
+    html+=`<div><b>${resource}</b><div style="display:flex;">`;
+    barTasks.forEach(t=>{
+      html+=`<div style="flex:1;padding:3px 0;margin:0 2px;background:${t.priority==='high'?'#fa3939':t.priority==='medium'?'#fabf3a':'#7ed957'};" title="${t.date}">${t.date}</div>`;
+    });
+    html+='</div></div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+function renderAnalyticsChart() {
+  let chartCanvas = document.getElementById('analytics-chart');
+  let schedule = window.currentScheduleArr||[];
+  let dataByResource = {};
+  schedule.forEach(task=>{
+    let res = task.resource||'Other';
+    dataByResource[res] = (dataByResource[res]||0) + (task.pages||1);
+  });
+  let resources=Object.keys(dataByResource);
+  let values=resources.map(r=>dataByResource[r]);
+  let chartData = {labels:resources, datasets:[{label:'Assigned',data:values,backgroundColor:'#2562cf'}]};
+  chartCanvas.height=230;
+  new Chart(chartCanvas, {type:'bar',data:chartData,options:{responsive:true}});
+  let summary = resources.map((r,i)=>`<b>${r}</b>: ${values[i]} assigned`).join('<br>');
+  document.getElementById('analytics-summary').innerHTML = summary;
+}
 
-// ICS, CSV, PDF, backup, restore remain as previously provided (no change from last update)
+// Export, Backup/Restore and Print logic:
+document.getElementById('download-csv-btn').onclick = function() {
+  if (!window.lastPlanConfig) { alert('No schedule to export!'); return; }
+  let csv = 'Priority,Date,Resource,Type,Tag,Assigned,Note\n';
+  const progress = loadProgress()[window.lastPlanConfig.planId] || {};
+  document.querySelectorAll('.draggable-item').forEach(item => {
+    const tid = item.getAttribute('data-tid');
+    if (!tid || progress[tid]) return;
+    const prio = item.querySelector('.priority-label') ? item.querySelector('.priority-label').innerText.trim() : '';
+    const date = item.querySelector('b') ? item.querySelector('b').innerText.trim() : '';
+    const resource = item.querySelector('span:nth-of-type(2)') ? item.querySelector('span:nth-of-type(2)').innerText.trim() : '';
+    const type = item.querySelector('span:nth-of-type(3)') ? item.querySelector('span:nth-of-type(3)').innerText.replace(/[\(\)]/g,'').trim() : '';
+    const tag = item.querySelector('span:nth-of-type(4)') ? item.querySelector('span:nth-of-type(4)').innerText.replace(/[\[\]]/g,'').trim() : '';
+    const assigned = (item.innerText.match(/Assigned: (\d+)/)||[])[1] || '';
+    const note = item.querySelector('input[type=text]') ? item.querySelector('input[type=text]').value.replace(/,/g,';') : '';
+    csv += [prio, date, resource, type, tag, assigned, note].map(x=>`"${x}"`).join(',')+'\n';
+  });
+  const blob = new Blob([csv], {type: 'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'study_schedule.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{document.body.removeChild(a); URL.revokeObjectURL(url);}, 100);
+};
+
 document.getElementById('download-ics-btn').onclick = function() {
   if (!window.lastPlanConfig) { alert('No schedule to export!'); return; }
   const incompleteTasks = [];
@@ -615,32 +556,8 @@ END:VCALENDAR`;
   setTimeout(()=>{document.body.removeChild(a); URL.revokeObjectURL(url);}, 100);
 };
 
-document.getElementById('download-csv-btn').onclick = function() {
-  if (!window.lastPlanConfig) { alert('No schedule to export!'); return; }
-  let csv = 'Priority,Date,Resource,Type,Tag,Assigned,Note\n';
-  const progress = loadProgress()[window.lastPlanConfig.planId] || {};
-  document.querySelectorAll('.draggable-item').forEach(item => {
-    const tid = item.getAttribute('data-tid');
-    if (!tid || progress[tid]) return;
-    const prio = item.querySelector('.priority-label') ? item.querySelector('.priority-label').innerText.trim() : '';
-    const date = item.querySelector('b') ? item.querySelector('b').innerText.trim() : '';
-    const resource = item.querySelector('span:nth-of-type(2)') ? item.querySelector('span:nth-of-type(2)').innerText.trim() : '';
-    const type = item.querySelector('span:nth-of-type(3)') ? item.querySelector('span:nth-of-type(3)').innerText.replace(/[\(\)]/g,'').trim() : '';
-    const tag = item.querySelector('span:nth-of-type(4)') ? item.querySelector('span:nth-of-type(4)').innerText.replace(/[\[\]]/g,'').trim() : '';
-    const assigned = (item.innerText.match(/Assigned: (\d+)/)||[])[1] || '';
-    const note = item.querySelector('input[type=text]') ? item.querySelector('input[type=text]').value.replace(/,/g,';') : '';
-    csv += [prio, date, resource, type, tag, assigned, note].map(x=>`"${x}"`).join(',')+'\n';
-  });
-  const blob = new Blob([csv], {type: 'text/csv'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'study_schedule.csv';
-  document.body.appendChild(a); a.click();
-  setTimeout(()=>{document.body.removeChild(a); URL.revokeObjectURL(url);}, 100);
-};
 document.getElementById('download-pdf-btn').onclick = function() { window.print(); };
 
-// Backup
 document.getElementById('backup-btn').onclick = function() {
   if (!window.lastPlanConfig) { alert('No schedule to export!'); return; }
   let json = JSON.stringify({
@@ -671,6 +588,7 @@ document.getElementById('restore-file').onchange = function(evt) {
         window.lastNotesCache = obj.notes || {};
         window.lastOrderCache = obj.manualOrder || {};
         renderSchedule(window.lastPlanConfig, window.lastProgressCache, false);
+        renderAllViews();
         alert('Backup restored!');
       }
     } catch { alert('Could not parse backup.'); }
@@ -685,6 +603,7 @@ function saveProgress(progress, notes, manualOrder) {
 function loadProgress() { return JSON.parse(localStorage.getItem('studyProgress') || '{}'); }
 function loadNotes() { return JSON.parse(localStorage.getItem('studyNotes') || '{}'); }
 function loadManualOrder() { return JSON.parse(localStorage.getItem('studyManualOrder') || '{}'); }
+
 </script>
 </body>
 </html>
