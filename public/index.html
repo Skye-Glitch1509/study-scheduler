@@ -2,213 +2,206 @@
 <html lang="en">
 <head>
   <title>FMGE/NEET PG Study Scheduler</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css?family=Inter:400,500,700&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.3/dist/chart.umd.min.js"></script>
   <style>
     body { font-family: 'Inter', Arial, sans-serif; background: #f7fafc; color: #232c40; margin:0; }
-    .dashboard-layout{display:flex;flex-direction:row;gap:22px;}
-    .sidebar-tabnav{min-width:120px;background:#e5eaf1;padding:15px 10px 5px 10px; border-radius:13px;box-shadow:0 1px 6px #23262f19;display:flex;flex-direction:column;gap:10px;}
-    .sidebar-tabnav button{background:none;color:#2562cf;border:none;margin:8px 0;padding:7px 11px;font-weight:600;font-size:1.03em;border-radius:7px;cursor:pointer;transition:background .14s;}
-    .sidebar-tabnav button.active,
-    .sidebar-tabnav button:focus{background:#2562cf;color:#fff;}
-    .section-panel{flex:1;padding:0;min-width:240px;}
-    label{font-weight:500;margin-right:7px;}
-    .card{background:#fff;box-shadow:0 2px 14px #23262f10; border-radius:16px; border:1px solid #e2e8f0;padding:13px 20px 10px 17px;margin-bottom:12px;}
-    .card-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center; margin-bottom:7px;}
-    .resource-row{margin-bottom:11px;background:#f2fcff;border-radius:9px;padding:8px 7px;display:flex;flex-wrap:wrap;gap:10px;}
-    .remove-btn{margin-left:14px;color:#bc2d2d;background:none;border:none;font-size:1.15em;cursor:pointer;}
-    .auto-count-label{color:#2562cf;font-weight:600;margin-left:4px;font-size:0.95em;}
-    .search-select{min-width:220px;}
-    input[type="number"]{width:55px;}
-    input[type="date"]{width:115px;}
-    @media (max-width:900px){.card-row{flex-direction:column;align-items:stretch;gap:7px;}.app-header{flex-direction:column;gap:8px;}}
-    @media (max-width:500px){.card{border-radius:8px;padding:8px 6px 5px 6px;}.resource-row{padding:6px;}label{font-size:.97em;}h1{font-size:1.2em;}.app-header{padding-left:3px;}button,input[type="button"]{padding:12px 6px;}}
+    .container { max-width:740px; margin:30px auto 36px; background:#fff; border-radius:18px; box-shadow:0 2px 12px #23262f15; padding:24px 28px;}
+    h1 { margin-top:0; font-size:2em; font-weight:700; color:#2562cf;}
+    .card-row { display:flex; flex-wrap:wrap; gap:15px; align-items:center; margin-bottom:18px;}
+    label { font-weight:500; margin-right:7px;}
+    input, select, button { font-family:inherit; font-size:.98em;}
+    .resource-row { background:#f2fcff; border-radius:9px; padding:7px 6px 7px 7px; margin-bottom:14px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
+    .remove-btn { margin-left:10px; color:#bc2d2d; background:none; border:none; font-size:1.07em; cursor:pointer; }
+    .auto-count-label { color:#2562cf; font-weight:600; margin-left:2px; }
+    .schedule-list { margin-top:24px; }
+    .schedule-day { margin-bottom:11px; padding:11px 13px; border-radius:11px; background:#f6f8fa;}
+    .task-row { display:flex; align-items:center; gap:13px; margin-top:7px; background:#f9fcff; border-radius:7px; padding:7px; }
+    .progress-check { transform:scale(1.23); margin-right:0; }
+    .notes { margin-top:7px; color: #265292; font-size:.99em;}
+    .btn-row { display:flex; gap:14px; justify-content:right;}
     #toast-notify { position:fixed;z-index:9999;left:50%;top:32px;transform:translateX(-50%);background:#26994a;color:#fff;font-weight:600;
-      border-radius:10px;box-shadow:0 4px 18px #0002;padding:14px 36px;font-size:1.07em;opacity:0;transition:opacity .32s,top .32s;pointer-events:none;}
+      border-radius:10px;box-shadow:0 4px 18px #0002;padding:12px 36px;font-size:1.07em;opacity:0;transition:opacity .32s,top .32s;pointer-events:none;}
     #toast-notify.show { opacity:1;top:70px;pointer-events:auto;}
+    @media(max-width:700px){.container{max-width:99vw;padding:10px 2vw;}.card-row,.resource-row,.btn-row{flex-direction:column;align-items:stretch;gap:8px;}}
   </style>
 </head>
 <body>
 <div id="toast-notify"></div>
-<div class="app-header" style="display:flex;align-items:center;gap:18px;padding-left:8px;">
-  <h1 style="flex:1;">FMGE/NEET PG Study Scheduler</h1>
-  <button id="darkmode-btn" aria-label="Toggle dark mode">🌙</button>
+<div class="container">
+  <h1>FMGE/NEET PG Study Scheduler</h1>
+  <form id="study-form" autocomplete="off">
+    <div class="card-row">
+      <label>Study hours per day:
+        <input type="number" id="study-hours-per-day" min="1" max="24" value="3">
+      </label>
+      <label>Start:
+        <input type="date" id="start-date" required>
+      </label>
+      <label>End:
+        <input type="date" id="end-date" required>
+      </label>
+    </div>
+    <div id="resource-list">
+      <div class="resource-row">
+        <label>Resource:
+          <input type="text" class="resource-search" list="resource-library" autocomplete="off" required style="min-width:160px;">
+          <datalist id="resource-library">
+            <!-- Add/extend resources easily -->
+            <option value="Marrow Video - Anatomy">
+            <option value="Marrow Video - Physiology">
+            <option value="Marrow Video - Biochemistry">
+            <option value="Marrow Video - Pathology">
+            <option value="Marrow Video - Pharmacology">
+            <option value="Marrow Video - Microbiology">
+            <option value="Marrow Video - Forensic Medicine">
+            <option value="Marrow Video - Community Medicine">
+            <option value="Marrow Video - Medicine">
+            <option value="Marrow Video - Surgery">
+            <option value="Marrow Video - Obstetrics & Gynecology">
+            <option value="Marrow Video - Pediatrics">
+            <option value="Marrow Video - Ophthalmology">
+            <option value="Marrow Video - ENT">
+            <option value="Marrow Video - Psychiatry">
+            <option value="Marrow Video - Dermatology">
+            <option value="Marrow Video - Radiology">
+            <option value="Marrow Video - Orthopedics">
+            <option value="Marrow Video - Anesthesia">
+            <option value="Prepladder Video - Anatomy">
+            <option value="Prepladder Video - Physiology">
+            <option value="Prepladder Video - Biochemistry">
+            <option value="Prepladder Video - Pathology">
+            <option value="Prepladder Video - Pharmacology">
+            <option value="Prepladder Video - Microbiology">
+            <option value="Prepladder Video - Forensic Medicine">
+            <option value="Prepladder Video - Community Medicine">
+            <option value="Prepladder Video - Medicine">
+            <option value="Prepladder Video - Surgery">
+            <option value="Prepladder Video - Obstetrics & Gynecology">
+            <option value="Prepladder Video - Pediatrics">
+            <option value="Prepladder Video - Ophthalmology">
+            <option value="Prepladder Video - ENT">
+            <option value="Prepladder Video - Psychiatry">
+            <option value="Prepladder Video - Dermatology">
+            <option value="Prepladder Video - Radiology">
+            <option value="Prepladder Video - Orthopedics">
+            <option value="Prepladder Video - Anesthesia">
+            <option value="Marrow QBank">
+            <option value="Prepladder QBank">
+            <option value="DAMS QBank">
+            <option value="DocTutorials QBank">
+            <option value="Robbins Pathology">
+          </datalist>
+        </label>
+        <label>Type:
+          <select class="resource-type-dropdown">
+            <option value="video">Video</option>
+            <option value="qbank">QBank</option>
+            <option value="book">Book</option>
+            <option value="flashcards">Flashcards</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label>
+          Total:
+          <input type="number" class="pages" required style="width:67px;">
+          <span class="auto-count-label">(auto/manual)</span>
+        </label>
+        <label>
+          Rate/hr: <input type="number" class="rate-per-hour" min="1" value="10" style="width:55px;">
+        </label>
+        <label>
+          <input type="checkbox" class="no-total-checkbox">
+          <span>No total/end</span>
+        </label>
+        <label>
+          Priority:
+          <select class="priority-dropdown">
+            <option value="high">High ⭐</option>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </label>
+        <label>Tag: <input type="text" class="resource-tag" placeholder="Tag" style="width:65px;"></label>
+        <label>Note: <input type="text" class="resource-note" placeholder="Note" style="width:105px;"></label>
+        <label>
+          Interval:
+          <select class="interval-dropdown" style="width:67px;">
+            <option value="1">Daily</option>
+            <option value="2">Every 2nd</option>
+            <option value="3">Every 3rd</option>
+            <option value="7">Weekly</option>
+          </select>
+        </label>
+        <button type="button" class="remove-btn" style="display:none;">✖</button>
+      </div>
+    </div>
+    <div class="btn-row" style="margin-bottom:10px;">
+      <button type="button" id="add-resource-btn">Add Resource</button>
+      <button type="submit">Create Schedule</button>
+      <button type="button" id="reset-btn">Reset</button>
+      <button type="button" id="backup-btn">Backup</button>
+      <button type="button" id="restore-btn">Restore</button>
+      <input type="file" id="restore-file" style="display:none;">
+    </div>
+  </form>
+  <div class="schedule-list" id="schedule-list"></div>
 </div>
-<div class="dashboard-layout">
-  <nav class="sidebar-tabnav" aria-label="Main navigation">
-    <button id="nav-list" class="active">List & Plan</button>
-    <button id="nav-calendar">Calendar</button>
-    <button id="nav-gantt">Gantt</button>
-    <button id="nav-analytics">Analytics</button>
-    <button id="backup-btn">Backup</button>
-    <button id="restore-btn">Restore</button>
-    <input type="file" id="restore-file" style="display:none;">
-  </nav>
-  <main id="main-panels">
-    <section id="list-view" class="section-panel">
-      <form id="study-form">
-        <div class="card card-row">
-          <label>Study hours per day: <input type="number" id="study-hours-per-day" min="1" max="24" value="3"></label>
-        </div>
-        <div id="resource-list">
-          <div class="card card-row resource-row" draggable="true">
-            <label>Resource:
-              <input type="text" class="resource-search search-select" list="resource-library" autocomplete="off" required>
-              <datalist id="resource-library">
-                <!-- FMGE/NEET PG video lecture resource options (fill in more as needed) -->
-                <option value="Marrow Video - Anatomy">
-                <option value="Marrow Video - Physiology">
-                <option value="Marrow Video - Biochemistry">
-                <option value="Marrow Video - Pathology">
-                <option value="Marrow Video - Pharmacology">
-                <option value="Marrow Video - Microbiology">
-                <option value="Marrow Video - Forensic Medicine">
-                <option value="Marrow Video - Community Medicine">
-                <option value="Marrow Video - Medicine">
-                <option value="Marrow Video - Surgery">
-                <option value="Marrow Video - Obstetrics & Gynecology">
-                <option value="Marrow Video - Pediatrics">
-                <option value="Marrow Video - Ophthalmology">
-                <option value="Marrow Video - ENT">
-                <option value="Marrow Video - Psychiatry">
-                <option value="Marrow Video - Dermatology">
-                <option value="Marrow Video - Radiology">
-                <option value="Marrow Video - Orthopedics">
-                <option value="Marrow Video - Anesthesia">
-                <!-- Prepladder Video -->
-                <option value="Prepladder Video - Anatomy">
-                <option value="Prepladder Video - Physiology">
-                <option value="Prepladder Video - Biochemistry">
-                <option value="Prepladder Video - Pathology">
-                <option value="Prepladder Video - Pharmacology">
-                <option value="Prepladder Video - Microbiology">
-                <option value="Prepladder Video - Forensic Medicine">
-                <option value="Prepladder Video - Community Medicine">
-                <option value="Prepladder Video - Medicine">
-                <option value="Prepladder Video - Surgery">
-                <option value="Prepladder Video - Obstetrics & Gynecology">
-                <option value="Prepladder Video - Pediatrics">
-                <option value="Prepladder Video - Ophthalmology">
-                <option value="Prepladder Video - ENT">
-                <option value="Prepladder Video - Psychiatry">
-                <option value="Prepladder Video - Dermatology">
-                <option value="Prepladder Video - Radiology">
-                <option value="Prepladder Video - Orthopedics">
-                <option value="Prepladder Video - Anesthesia">
-                <!-- Add QBanks/books/other major resources here as needed -->
-                <option value="Marrow QBank">
-                <option value="Prepladder QBank">
-                <option value="DAMS QBank">
-                <option value="DocTutorials QBank">
-                <option value="Robbins Pathology">
-              </datalist>
-            </label>
-            <label>
-              Type:
-              <select class="resource-type-dropdown">
-                <option value="video">Video</option>
-                <option value="qbank">QBank</option>
-                <option value="book">Book</option>
-                <option value="flashcards">Flashcards</option>
-                <option value="other">Other</option>
-              </select>
-            </label>
-            <label>
-              Total:
-              <input type="number" class="pages" required style="width:78px;">
-              <span class="auto-count-label">(Auto or manual)</span>
-            </label>
-            <label>
-              Rate per hour: <input type="number" class="rate-per-hour" min="1" value="10" style="width:70px;">
-              <span class="rate-type-label">items/hr</span>
-            </label>
-            <label>
-              <input type="checkbox" class="no-total-checkbox">
-              <span class="no-total-label">No total/end (repeat rate every eligible day)</span>
-            </label>
-            <label>
-              Priority:
-              <select class="priority-dropdown">
-                <option value="high">High ⭐</option>
-                <option value="medium" selected>Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </label>
-            <label>Tag: <input type="text" class="resource-tag" placeholder="Tag" style="width:90px;"></label>
-            <label>Note: <input type="text" class="resource-note" placeholder="Note" style="width:120px;"></label>
-            <label>
-              Interval:
-              <select class="interval-dropdown" style="width:87px;">
-                <option value="1">Every day</option>
-                <option value="2">Every other day</option>
-                <option value="3">Every 3rd day</option>
-                <option value="7">Every week</option>
-              </select>
-            </label>
-            <button type="button" class="remove-btn" style="display:none;">✖</button>
-          </div>
-        </div>
-        <button type="button" id="add-resource-btn">Add Resource</button>
-        <br>
 <script>
-// FMGE/NEET PG Resource Autofill Library (expand/add as needed)
+// Resource autofill library
 const resourceLibrary = {
-  "Marrow Video - Anatomy": { "type": "video", "total": 84 },
-  "Marrow Video - Physiology": { "type": "video", "total": null }, // To fill in
-  "Marrow Video - Biochemistry": { "type": "video", "total": 50 },
-  "Marrow Video - Pathology": { "type": "video", "total": 76 },
-  "Marrow Video - Pharmacology": { "type": "video", "total": null },
-  "Marrow Video - Microbiology": { "type": "video", "total": null },
-  "Marrow Video - Forensic Medicine": { "type": "video", "total": 38 },
-  "Marrow Video - Community Medicine": { "type": "video", "total": 100 },
-  "Marrow Video - Medicine": { "type": "video", "total": 202 },
-  "Marrow Video - Surgery": { "type": "video", "total": 94 },
-  "Marrow Video - Obstetrics & Gynecology": { "type": "video", "total": 109 },
-  "Marrow Video - Pediatrics": { "type": "video", "total": 58 },
-  "Marrow Video - Ophthalmology": { "type": "video", "total": 40 },
-  "Marrow Video - ENT": { "type": "video", "total": 64 },
-  "Marrow Video - Psychiatry": { "type": "video", "total": 25 },
-  "Marrow Video - Dermatology": { "type": "video", "total": 27 },
-  "Marrow Video - Radiology": { "type": "video", "total": 41 },
-  "Marrow Video - Orthopedics": { "type": "video", "total": 29 },
-  "Marrow Video - Anesthesia": { "type": "video", "total": 31 },
-  "Prepladder Video - Anatomy": { "type": "video", "total": 103 },
-  "Prepladder Video - Physiology": { "type": "video", "total": 60 },
-  "Prepladder Video - Biochemistry": { "type": "video", "total": null },
-  "Prepladder Video - Pathology": { "type": "video", "total": 77 },
-  "Prepladder Video - Pharmacology": { "type": "video", "total": 83 },
-  "Prepladder Video - Microbiology": { "type": "video", "total": 52 },
-  "Prepladder Video - Forensic Medicine": { "type": "video", "total": 34 },
-  "Prepladder Video - Community Medicine": { "type": "video", "total": 117 },
-  "Prepladder Video - Medicine": { "type": "video", "total": 141 },
-  "Prepladder Video - Surgery": { "type": "video", "total": 70 },
-  "Prepladder Video - Obstetrics & Gynecology": { "type": "video", "total": 112 },
-  "Prepladder Video - Pediatrics": { "type": "video", "total": 74 },
-  "Prepladder Video - Ophthalmology": { "type": "video", "total": 35 },
-  "Prepladder Video - ENT": { "type": "video", "total": 55 },
-  "Prepladder Video - Psychiatry": { "type": "video", "total": 20 },
-  "Prepladder Video - Dermatology": { "type": "video", "total": 29 },
-  "Prepladder Video - Radiology": { "type": "video", "total": 27 },
-  "Prepladder Video - Orthopedics": { "type": "video", "total": 21 },
-  "Prepladder Video - Anesthesia": { "type": "video", "total": 22 },
-  "Marrow QBank": { "type": "qbank", "total": 16367 },
-  "Prepladder QBank": { "type": "qbank", "total": 19185 },
-  "DAMS QBank": { "type": "qbank", "total": 1682 },
-  "DocTutorials QBank": { "type": "qbank", "total": 13228 },
-  "Robbins Pathology": { "type": "book", "total": 1024 }
-  // Add more as needed
+  "Marrow Video - Anatomy": { type: "video", total: 84 },
+  "Marrow Video - Physiology": { type: "video", total: null },
+  "Marrow Video - Biochemistry": { type: "video", total: 50 },
+  "Marrow Video - Pathology": { type: "video", total: 76 },
+  "Marrow Video - Pharmacology": { type: "video", total: null },
+  "Marrow Video - Microbiology": { type: "video", total: null },
+  "Marrow Video - Forensic Medicine": { type: "video", total: 38 },
+  "Marrow Video - Community Medicine": { type: "video", total: 100 },
+  "Marrow Video - Medicine": { type: "video", total: 202 },
+  "Marrow Video - Surgery": { type: "video", total: 94 },
+  "Marrow Video - Obstetrics & Gynecology": { type: "video", total: 109 },
+  "Marrow Video - Pediatrics": { type: "video", total: 58 },
+  "Marrow Video - Ophthalmology": { type: "video", total: 40 },
+  "Marrow Video - ENT": { type: "video", total: 64 },
+  "Marrow Video - Psychiatry": { type: "video", total: 25 },
+  "Marrow Video - Dermatology": { type: "video", total: 27 },
+  "Marrow Video - Radiology": { type: "video", total: 41 },
+  "Marrow Video - Orthopedics": { type: "video", total: 29 },
+  "Marrow Video - Anesthesia": { type: "video", total: 31 },
+  "Prepladder Video - Anatomy": { type: "video", total: 103 },
+  "Prepladder Video - Physiology": { type: "video", total: 60 },
+  "Prepladder Video - Biochemistry": { type: "video", total: null },
+  "Prepladder Video - Pathology": { type: "video", total: 77 },
+  "Prepladder Video - Pharmacology": { type: "video", total: 83 },
+  "Prepladder Video - Microbiology": { type: "video", total: 52 },
+  "Prepladder Video - Forensic Medicine": { type: "video", total: 34 },
+  "Prepladder Video - Community Medicine": { type: "video", total: 117 },
+  "Prepladder Video - Medicine": { type: "video", total: 141 },
+  "Prepladder Video - Surgery": { type: "video", total: 70 },
+  "Prepladder Video - Obstetrics & Gynecology": { type: "video", total: 112 },
+  "Prepladder Video - Pediatrics": { type: "video", total: 74 },
+  "Prepladder Video - Ophthalmology": { type: "video", total: 35 },
+  "Prepladder Video - ENT": { type: "video", total: 55 },
+  "Prepladder Video - Psychiatry": { type: "video", total: 20 },
+  "Prepladder Video - Dermatology": { type: "video", total: 29 },
+  "Prepladder Video - Radiology": { type: "video", total: 27 },
+  "Prepladder Video - Orthopedics": { type: "video", total: 21 },
+  "Prepladder Video - Anesthesia": { type: "video", total: 22 },
+  "Marrow QBank": { type: "qbank", total: 16367 },
+  "Prepladder QBank": { type: "qbank", total: 19185 },
+  "DAMS QBank": { type: "qbank", total: 1682 },
+  "DocTutorials QBank": { type: "qbank", total: 13228 },
+  "Robbins Pathology": { type: "book", total: 1024 }
 };
-// Autofill hook on resource row
+// Autofill logic
 function setupResourceAutofill(row) {
   const searchBox = row.querySelector('.resource-search');
   const typeSel = row.querySelector('.resource-type-dropdown');
   const totalBox = row.querySelector('.pages');
-  searchBox.addEventListener('change', function() {
+  searchBox.addEventListener('change', function () {
     const val = searchBox.value.trim();
-    if(resourceLibrary.hasOwnProperty(val)) {
+    if (resourceLibrary.hasOwnProperty(val)) {
       const meta = resourceLibrary[val];
       typeSel.value = meta.type;
       if (meta.total) {
@@ -227,18 +220,18 @@ function setupResourceAutofill(row) {
       totalBox.style.background = "#fff";
     }
   });
-  totalBox.addEventListener('focus', function() {
+  totalBox.addEventListener('focus', function () {
     totalBox.readOnly = false;
     totalBox.style.background = "#fff";
   });
-  typeSel.onchange = function() {
-    if (typeSel.value !== (resourceLibrary[searchBox.value]||{}).type) {
+  typeSel.onchange = function () {
+    if (typeSel.value !== (resourceLibrary[searchBox.value] || {}).type) {
       totalBox.readOnly = false;
       totalBox.style.background = "#fff";
     }
   };
 }
-function addResourceRow(resourceVal="",typeVal="video",totalVal="",rateVal="10") {
+function addResourceRow(resourceVal = "", typeVal = "video", totalVal = "", rateVal = "10") {
   const resourceList = document.getElementById('resource-list');
   const newRow = resourceList.firstElementChild.cloneNode(true);
   newRow.querySelector('.resource-search').value = resourceVal;
@@ -248,214 +241,149 @@ function addResourceRow(resourceVal="",typeVal="video",totalVal="",rateVal="10")
   setupResourceAutofill(newRow);
   const removeBtn = newRow.querySelector('.remove-btn');
   removeBtn.style.display = 'inline';
-  removeBtn.addEventListener('click', function() { newRow.remove(); });
+  removeBtn.addEventListener('click', function () { newRow.remove(); });
   resourceList.appendChild(newRow);
   setupResourceAutofill(newRow);
 }
 setupResourceAutofill(document.querySelector('.resource-row'));
-document.getElementById('add-resource-btn').addEventListener('click', function() { addResourceRow(); });
-function showToast(msg, color="#2562cf") {
+document.getElementById('add-resource-btn').addEventListener('click', function () { addResourceRow(); });
+
+// Form scheduling logic
+document.getElementById('study-form').addEventListener('submit', function (e) {
+  e.preventDefault();
+  const startDate = document.getElementById('start-date').value;
+  const endDate = document.getElementById('end-date').value;
+  if (!startDate || !endDate) return showToast("Start/end date required!", "#bc2d2d");
+  const start = new Date(startDate),
+        end = new Date(endDate);
+  if (start > end) return showToast("End date must be after start!", "#bc2d2d");
+  const hoursPerDay = +document.getElementById('study-hours-per-day').value;
+  const resourceRows = Array.from(document.querySelectorAll('.resource-row'));
+  let plan = [];
+  resourceRows.forEach(row => {
+    let name = row.querySelector('.resource-search').value.trim();
+    let type = row.querySelector('.resource-type-dropdown').value;
+    let total = +row.querySelector('.pages').value;
+    let rate = +row.querySelector('.rate-per-hour').value;
+    let note = row.querySelector('.resource-note').value.trim();
+    let tag = row.querySelector('.resource-tag').value.trim();
+    let priority = row.querySelector('.priority-dropdown').value;
+    let interval = +row.querySelector('.interval-dropdown').value;
+    let noTotal = row.querySelector('.no-total-checkbox').checked;
+    if (!name || (!noTotal && !total)) return;
+    plan.push({ name, type, total, rate, note, tag, priority, interval, noTotal });
+  });
+  // Build schedule: assign each resource's items to study days in order
+  let days = [];
+  for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+    days.push(new Date(dt));
+  }
+  let schedule = [];
+  plan.forEach(resource => {
+    let count = resource.noTotal ? hoursPerDay * resource.rate * days.length :
+      Math.min(resource.total, hoursPerDay * days.length * resource.rate);
+    let index = 0, left = resource.total;
+    for (let d = 0; d < days.length; d += resource.interval) {
+      let day = new Date(days[d]);
+      let assign = resource.noTotal ? resource.rate : Math.min(resource.rate, left);
+      if (!resource.noTotal) left -= assign;
+      schedule.push({
+        resource: resource.name,
+        type: resource.type,
+        tag: resource.tag,
+        note: resource.note,
+        priority: resource.priority,
+        date: day.toISOString().slice(0,10),
+        assign,
+        index: ++index
+      });
+      if (!resource.noTotal && left <= 0) break;
+    }
+  });
+  window._schedule = schedule;
+  renderSchedule(schedule);
+  showToast('Schedule created!', "#26994a");
+});
+
+function renderSchedule(schedule) {
+  const list = document.getElementById('schedule-list');
+  if (!schedule || schedule.length === 0) { list.innerHTML = "<div style='color:#bc2d2d;margin:18px;'>No schedule found. Fill the form above!</div>"; return; }
+  let byDay = {};
+  schedule.forEach(task => {
+    if (!byDay[task.date]) byDay[task.date] = [];
+    byDay[task.date].push(task);
+  });
+  let html = "";
+  Object.keys(byDay).sort().forEach(date => {
+    html += `<div class="schedule-day"><b>${date}</b>`;
+    byDay[date].forEach((task, idx) => {
+      html += `<div class="task-row">
+          <input type="checkbox" class="progress-check" data-date="${date}" data-idx="${idx}">
+          <span style="font-weight:600;">${task.resource}</span> 
+          <span>[${task.assign} items]</span>
+          <span style="color:#589;">${task.type}</span>
+          <span style="color:${task.priority==='high'?'#d30':'#b97'}">${task.priority}</span>
+          ${task.tag ? `<span style="color:#2562cf;">#${task.tag}</span>` : ""}
+          ${task.note ? `<span class="notes">${task.note}</span>` : ""}
+        </div>`;
+    });
+    html += "</div>";
+  });
+  list.innerHTML = html;
+  // Progress
+  Array.from(list.querySelectorAll('.progress-check')).forEach(chk => {
+    chk.addEventListener('change', function(){
+      chk.parentElement.style.opacity = chk.checked ? ".45" : "1";
+    });
+  });
+}
+
+function showToast(msg, color = "#2562cf") {
   const toast = document.getElementById("toast-notify");
   toast.textContent = msg;
   toast.style.background = color;
   toast.classList.add("show");
-  setTimeout(()=>toast.classList.remove("show"), 2200);
-}
-// Continue with deep scheduling logic: rest/review, notes, ordering, progress, 
-// All old structures here; merge resource autofill into wherever you fetch/set resource type/total.
-</script>
-<script>
-function extractScheduleArrFromModel() {
-  let arr=[];
-  if(window.lastPlanConfig){
-    let plan=window.lastPlanConfig;
-    let progress=loadProgress()[plan.planId]||{};
-    (plan.scheduleDays||[]).forEach((dayObj,i)=>{
-      plan.resourceNames.forEach((name,ri)=>{
-        const libMeta = resourceLibrary[name] || {};
-        arr.push({
-          resource: name,
-          date: dayObj.toLocaleDateString(),
-          dateObj: new Date(dayObj),
-          pages: plan.noTotalArr && plan.noTotalArr[ri]
-            ? plan.ratePerHour[ri]
-            : plan.pageCounts && plan.pageCounts[ri] ? plan.pageCounts[ri] : 0,
-          priority: plan.priorities ? plan.priorities[ri] : 'medium',
-          checked: progress[`${plan.planId}_${name}_${i}`]||false,
-          isInfinite: plan.noTotalArr ? plan.noTotalArr[ri] : false,
-          type: libMeta.type || (plan.resourceTypes ? plan.resourceTypes[ri] : 'other')
-        });
-      });
-    });
-  }
-  window.currentScheduleArr = arr;
-  return arr;
-}
-// calendar
-function renderCalendar(schedule) {
-  const calDiv = document.getElementById('calendar-view');
-  calDiv.innerHTML = '<div id="study-calendar"></div>';
-  if (!schedule || schedule.length === 0) {
-    calDiv.innerHTML += '<div style="margin:28px;color:#bc2d2d;">No scheduled tasks found. Create a study plan first!</div>';
-    return;
-  }
-  let events = [];
-  (schedule||[]).forEach(task=>{
-    if(task.resource && !task.checked) {
-      events.push({
-        title: (resourceLibrary[task.resource]?.type === "video" ? "📺" : "📚") +
-          " " + task.resource + (task.isInfinite ? " (∞)" : "") + ' (' + task.pages + ')',
-        start: task.dateObj,
-        allDay: true,
-        color: task.priority==='high'?'#fa3939':task.priority==='medium'?'#fabf3a':'#7ed957'
-      });
-    }
-  });
-  let calendar = new FullCalendar.Calendar(calDiv.querySelector('#study-calendar'),{
-    initialView:'dayGridMonth',
-    events:events,
-    height:530,
-    editable:true,
-    eventClick:function(info){
-      showToast("Task Info: "+info.event.title + " on " + info.event.startStr,"#2562cf");
-    }
-  });
-  calendar.render();
+  setTimeout(() => toast.classList.remove("show"), 2100);
 }
 
-function renderAnalyticsChart() {
-  let chartCanvas = document.getElementById('analytics-chart');
-  let schedule = window.currentScheduleArr||[];
-  if (!schedule || schedule.length === 0) {
-    document.getElementById('analytics-summary').innerHTML = '<div style="color:#bc2d2d;margin:18px;">No scheduled tasks found. Create a study plan first!</div>';
-    chartCanvas.style.display = "none";
-    return;
-  }
-  chartCanvas.style.display = "";
-  let dataByResource = {};
-  schedule.forEach(task=>{
-    let res = task.resource||'Other';
-    dataByResource[res] = (dataByResource[res]||0) + (task.pages||1);
-  });
-  let resources=Object.keys(dataByResource);
-  let values=resources.map(r=>dataByResource[r]);
-  let chartData = {labels:resources, datasets:[{label:'Assigned',data:values,backgroundColor:'#2562cf'}]};
-  chartCanvas.height=230;
-  new Chart(chartCanvas, {type:'bar',data:chartData,options:{responsive:true}});
-  let summary = resources.map((r,i)=>`<b>${r}</b>: ${values[i]} assigned`).join('<br>');
-  document.getElementById('analytics-summary').innerHTML = summary;
+// Reset
+document.getElementById('reset-btn').onclick = function(){
+  window._schedule = [];
+  document.getElementById('schedule-list').innerHTML = "";
+  showToast('Form/schedule cleared!',"#2562cf");
 }
 
-// Backup/Restore (all resource names/types/totals included)
-document.getElementById('backup-btn').onclick = function() {
-  if (!window.lastPlanConfig) { showToast('No schedule to export!',"#bc2d2d"); return; }
-  let json = JSON.stringify({
-    planConfig: window.lastPlanConfig || {},
-    progress: window.lastProgressCache || {},
-    notes: window.lastNotesCache || {},
-    manualOrder: window.lastOrderCache || {}
-  }, null, 2);
+// Backup/restore
+document.getElementById('backup-btn').onclick = function(){
+  let json = JSON.stringify(window._schedule || [], null, 2);
   let blob = new Blob([json], {type:"application/json"});
   let url = window.URL.createObjectURL(blob);
   let a = document.createElement("a");
   a.href = url; a.download = "study_plan_backup.json";
   document.body.appendChild(a); a.click();
-  setTimeout(()=>{document.body.removeChild(a);window.URL.revokeObjectURL(url);},100);
+  setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); },100);
   showToast("Backup downloaded!");
 };
-document.getElementById('restore-btn').onclick = function() { document.getElementById('restore-file').click(); };
-document.getElementById('restore-file').onchange = function(evt) {
+document.getElementById('restore-btn').onclick = function(){
+  document.getElementById('restore-file').click();
+};
+document.getElementById('restore-file').onchange = function(evt){
   let file = evt.target.files[0];
   if (!file) return;
   let reader = new FileReader();
-  reader.onload = function(e) {
-    try {
+  reader.onload = function(e){
+    try{
       let obj = JSON.parse(e.target.result);
-      if (!obj.planConfig) throw new Error("Missing planConfig");
-      window.lastPlanConfig = obj.planConfig;
-      window.lastProgressCache = obj.progress || {};
-      window.lastNotesCache = obj.notes || {};
-      window.lastOrderCache = obj.manualOrder || {};
-      renderSchedule(window.lastPlanConfig, window.lastProgressCache, false);
-      renderAllViews();
+      window._schedule = obj;
+      renderSchedule(window._schedule);
       showToast('Backup restored!', "#26994a");
-    } catch(e) {
-      showToast('Could not parse backup. File may be corrupted or from an incompatible/old version.', "#bc2d2d");
+    }catch(e){
+      showToast('Backup file error!', "#bc2d2d");
     }
   };
   reader.readAsText(file);
 };
-// Local storage utility as before
-function loadProgress() { return JSON.parse(localStorage.getItem('studyProgress') || '{}'); }
-function loadNotes() { return JSON.parse(localStorage.getItem('studyNotes') || '{}'); }
-function loadManualOrder() { return JSON.parse(localStorage.getItem('studyManualOrder') || '{}'); }
 
 </script>
-<script>
-// GANTT timeline visualization (build out with your task/week breakdowns and autofill types)
-function renderGantt(schedule) {
-  const ganttDiv = document.getElementById('gantt-view');
-  ganttDiv.innerHTML = '<div id="study-gantt" style="width:100%;height:340px;"></div>';
-  if (!schedule || schedule.length === 0) {
-    ganttDiv.innerHTML += '<div style="margin:26px;color:#bc2d2d;">No scheduled tasks found. Create a study plan first!</div>';
-    return;
-  }
-  // Example: Render vertical colored bars for each resource over time, grouped by resource type/priority
-  ganttDiv.innerHTML += '<div style="margin-top:17px;">(Gantt visualization and week collapse UI can be expanded here)</div>';
-}
-
-// Collapsible weeks (UI polish)
-function collapseWeek(weekNum) {
-  document.querySelectorAll(`.week-row[data-week="${weekNum}"]`).forEach(row=>row.classList.toggle('collapsed'));
-}
-
-function showModal(title,msg,btnMsg="OK") {
-  if(document.getElementById("custom-modal"))return;
-  const overlay = document.createElement("div");
-  overlay.className="modal-overlay";
-  overlay.id="custom-modal";
-  overlay.innerHTML = `<div class="modal-dialog"><h2>${title}</h2><div>${msg}</div><button>${btnMsg}</button></div>`;
-  document.body.appendChild(overlay);
-  overlay.querySelector("button").onclick=()=>overlay.remove();
-}
-
-// Dark mode and navigation
-const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
-function autoSetDarkMode() {
-  const useDark = darkModeQuery.matches || localStorage.getItem('darkOverride') === '1';
-  document.body.classList.toggle('dark', useDark);
-  document.getElementById('darkmode-btn').innerText = useDark ? "🌞" : "🌙";
-}
-darkModeQuery.addEventListener('change', autoSetDarkMode);
-autoSetDarkMode();
-document.getElementById('darkmode-btn').onclick = function() {
-  const wasDark = document.body.classList.contains('dark');
-  localStorage.setItem('darkOverride', wasDark ? '0' : '1');
-  autoSetDarkMode();
-};
-
-function showPanel(panel){
-  Array.from(document.querySelectorAll('.section-panel')).forEach(sec=>sec.style.display='none');
-  document.getElementById(`${panel}-view`).style.display='';
-  Array.from(document.querySelectorAll('.sidebar-tabnav button')).forEach(btn=>btn.classList.remove('active'));
-  document.getElementById(`nav-${panel}`).classList.add('active');
-}
-document.getElementById('nav-list').onclick=()=>showPanel('list');
-document.getElementById('nav-calendar').onclick=()=>{showPanel('calendar');renderCalendar(extractScheduleArrFromModel());};
-document.getElementById('nav-gantt').onclick=()=>{showPanel('gantt');renderGantt(extractScheduleArrFromModel());};
-document.getElementById('nav-analytics').onclick=()=>{showPanel('chart');renderAnalyticsChart();};
-// ... Any additional advanced UI routines/drag-drop/week toggle (merge from previous code as needed)
-</script>
-        <!-- End Form -->
-      </form>
-    </section>
-    <section id="calendar-view" class="section-panel" style="display:none;"></section>
-    <section id="gantt-view" class="section-panel" style="display:none;"></section>
-    <section id="chart-view" class="section-panel" style="display:none;">
-      <canvas id="analytics-chart" style="max-width:380px;"></canvas>
-      <div id="analytics-summary" style="max-width:380px;margin:14px 0 0 0;"></div>
-    </section>
-  </main>
-</div>
 </body>
 </html>
