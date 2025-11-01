@@ -209,7 +209,7 @@ function setupResourceAutofill(row) {
     if (resourceLibrary.hasOwnProperty(val)) {
       const meta = resourceLibrary[val];
       typeSel.value = meta.type;
-      typeSel.disabled = true;
+      typeSel.disabled = false; // <-- fix: allow user to change type
       if (meta.total) {
         totalBox.value = meta.total;
         totalBox.readOnly = true;
