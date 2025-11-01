@@ -267,7 +267,7 @@ function addResourceRow(resourceVal = "", typeVal = "video", totalVal = "", rate
 setupResourceAutofill(document.querySelector('.resource-row'));
 document.getElementById('add-resource-btn').addEventListener('click', function () { addResourceRow(); });
 
-// Updated schedule builder logic:
+// FINAL SCHEDULER LOGIC: daily hours split equally among all resources scheduled that day
 document.getElementById('study-form').addEventListener('submit', function (e) {
   e.preventDefault();
   const startDate = document.getElementById('start-date').value;
@@ -290,7 +290,7 @@ document.getElementById('study-form').addEventListener('submit', function (e) {
     let noTotal = row.querySelector('.no-total-checkbox').checked;
     if (!name) return;
     if (!noTotal && !total) return; // require total unless noTotal
-    plan.push({ name, type, total, rate, note, tag, priority, interval, noTotal });
+    plan.push({ name, type, total, rate, note, tag, priority, interval, noTotal, assigned: 0 });
   });
   let days = [];
   for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
@@ -299,17 +299,16 @@ document.getElementById('study-form').addEventListener('submit', function (e) {
   let schedule = [];
   for (let d = 0; d < days.length; d++) {
     let day = new Date(days[d]);
-    // Find resources assigned for this interval
-    let todays = plan.filter(resource => (d % resource.interval) === 0 && (resource.noTotal || resource.total > 0));
-    // Total rate per hour today
-    let totalRate = todays.reduce((sum, r) => sum + r.rate, 0);
-    // Distribute hours proportionally
+    // Find resources scheduled today
+    let todays = plan.filter(resource => (d % resource.interval) === 0 && (resource.noTotal || resource.total > resource.assigned));
+    let nResources = todays.length;
+    if (nResources === 0) continue;
+    let hoursPerResource = hoursPerDay / nResources;
     todays.forEach(resource => {
-      let timeFraction = resource.rate / totalRate;
-      let hoursAlloc = hoursPerDay * timeFraction;
       let assign = resource.noTotal
-        ? Math.round(hoursAlloc * resource.rate)
-        : Math.min(Math.round(hoursAlloc * resource.rate), resource.total || Infinity);
+        ? Math.round(hoursPerResource * resource.rate)
+        : Math.min(Math.round(hoursPerResource * resource.rate), resource.total - resource.assigned);
+      if (assign <= 0) return;
       schedule.push({
         resource: resource.name,
         type: resource.type,
@@ -320,10 +319,8 @@ document.getElementById('study-form').addEventListener('submit', function (e) {
         assign,
         index: 1
       });
-      // Deduct from total if not unlimited
-      if (!resource.noTotal && resource.total) {
-        resource.total -= assign;
-        if (resource.total < 0) resource.total = 0;
+      if (!resource.noTotal) {
+        resource.assigned += assign;
       }
     });
   }
