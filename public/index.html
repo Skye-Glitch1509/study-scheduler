@@ -8,7 +8,7 @@
     ul { list-style-type: none; padding-left: 0; }
     li { margin-bottom: 7px; }
     .progress-checkbox { margin-right: 8px; cursor:pointer;}
-    #add-resource-btn, #bulk-add-btn, #rebalance-btn, #download-csv-btn, #download-ics-btn { margin-top: 8px; margin-bottom: 10px; }
+    #add-resource-btn, #bulk-add-btn, #rebalance-btn, #download-csv-btn, #download-ics-btn, #download-pdf-btn, #backup-btn, #restore-btn { margin-top: 8px; margin-bottom: 10px; }
     #progress-bar-container {
       width: 100%; max-width: 500px; height: 24px;
       background: #eee; border-radius: 12px; overflow: hidden; margin-bottom:20px; margin-top: 24px;
@@ -17,61 +17,39 @@
       width: 0%; height: 100%; background: #4CAF50;
       transition: width 0.3s;
     }
-    #progress-label {
-      margin-top: 3px; font-weight: bold;
-    }
-    .weekday-checkboxes label {
-      margin-right: 12px;
-    }
-    .interval-label {
-      display: inline-block;
-      margin-left: 12px;
-    }
-    .interval-dropdown {
-      width: 160px;
-      margin-left: 6px;
-    }
-    .resource-type-dropdown {
-      width: 110px;
-      margin-left: 8px;
-    }
-    .note-input {
-      margin-left: 8px; width: 160px; margin-right: 4px;
-    }
+    #progress-label { margin-top: 3px; font-weight: bold; }
+    .weekday-checkboxes label { margin-right: 12px; }
+    .interval-label { display: inline-block; margin-left: 12px; }
+    .interval-dropdown { width: 160px; margin-left: 6px; }
+    .resource-type-dropdown { width: 110px; margin-left: 8px; }
+    .note-input { margin-left: 8px; width: 160px; margin-right: 4px; }
     #holiday-list { margin-bottom: 10px; }
     .holiday-input-row { margin-bottom: 4px; }
-    .drag-indicator {
-      cursor: grab;
-      margin-right: 6px;
-      font-weight: bold;
-      color: #888;
-    }
-    .dragging {
-      opacity: 0.5;
-    }
-    .drop-target {
-      background: #fffae6 !important;
-    }
-    #bulk-modal {
-      display:none;
-      position:fixed;
-      top:0; left:0; right:0; bottom:0;
-      background: rgba(0,0,0,0.16);
-      z-index:1500;
-    }
-    #bulk-modal-inner {
-      position: absolute;
-      top: 50%; left: 50%; transform: translate(-50%,-50%);
-      background: #fff; padding:36px; border-radius:24px; box-shadow:0 0 32px #1113;
-      min-width:320px; min-height:250px;
-    }
+    .drag-indicator { cursor: grab; margin-right: 6px; font-weight: bold; color: #888; }
+    .dragging { opacity: 0.5; }
+    .drop-target { background: #fffae6 !important; }
+    #bulk-modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.16); z-index:1500; }
+    #bulk-modal-inner { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      background: #fff; padding:36px; border-radius:24px; box-shadow:0 0 32px #1113; min-width:320px; min-height:250px; }
     #rest-days-container, #review-days-container { margin-bottom:8px;}
     #review-dropdown { width:80px; margin-left:5px;}
     #review-days-container { margin-top:4px;}
+    #load-graph-container { margin-top: 20px; margin-bottom:24px;}
+    #load-graph-bar { display:flex; align-items:end; height:70px; gap:2px; }
+    #load-graph-bar>div { background:#9ec0ff; min-width:6px; border-radius:3px 3px 0 0; transition:height 0.2s; }
+    #load-graph-legend {font-size:12px;color:#444;margin-top:2px;}
+    #template-strip { background: #f7fafc; border-radius:12px; padding:6px 15px; margin:10px 0 14px 0; }
+    #template-strip button { margin-right:10px; border-radius:6px; }
   </style>
 </head>
 <body>
   <h1>Study Scheduler</h1>
+  <div id="template-strip">
+    <b>Templates:</b>
+    <button onclick="applyTemplate('exam')">Exam Cram</button>
+    <button onclick="applyTemplate('balanced')">Balanced Review</button>
+    <button onclick="applyTemplate('weekend')">Weekend Only</button>
+  </div>
   <form id="study-form" style="display:block;">
     <div id="resource-list">
       <div class="resource-row">
@@ -144,15 +122,25 @@
     <label>End Date: <input type="date" id="end-date" required></label><br>
     <button type="submit">Create Schedule</button>
   </form>
-  <button type="button" id="download-csv-btn" style="display:none;">Download CSV</button>
-  <button type="button" id="download-ics-btn" style="display:none;">Download Calendar (.ics)</button>
+  <div>
+    <button type="button" id="download-csv-btn" style="display:none;">Download CSV</button>
+    <button type="button" id="download-ics-btn" style="display:none;">Download Calendar (.ics)</button>
+    <button type="button" id="download-pdf-btn" style="display:none;">Print / Export PDF</button>
+    <button type="button" id="backup-btn" style="display:none;">Backup / Export JSON</button>
+    <button type="button" id="restore-btn" style="display:inline;">Import JSON</button>
+    <input type="file" id="restore-file" style="display:none;">
+  </div>
   <div id="progress-bar-container" style="display:none;">
     <div id="progress-bar"></div>
   </div>
   <div id="progress-label"></div>
   <button type="button" id="rebalance-btn" style="display:none;">Rebalance Schedule</button>
+  <div id="load-graph-container" style="display:none;">
+    <b>Daily Load Graph</b>
+    <div id="load-graph-bar"></div>
+    <div id="load-graph-legend"></div>
+  </div>
   <div id="schedule"></div>
-
   <!-- Bulk Add Modal -->
   <div id="bulk-modal">
     <div id="bulk-modal-inner">
@@ -182,16 +170,6 @@
     </div>
   </div>
 <script>
-// --- Utility functions for saving/loading local progress/notes/order ---
-function saveProgress(progress, notes, manualOrder) {
-  localStorage.setItem('studyProgress', JSON.stringify(progress));
-  localStorage.setItem('studyNotes', JSON.stringify(notes));
-  localStorage.setItem('studyManualOrder', JSON.stringify(manualOrder));
-}
-function loadProgress() { return JSON.parse(localStorage.getItem('studyProgress') || '{}'); }
-function loadNotes() { return JSON.parse(localStorage.getItem('studyNotes') || '{}'); }
-function loadManualOrder() { return JSON.parse(localStorage.getItem('studyManualOrder') || '{}'); }
-
 // Resource type icons/names
 const resourceTypeIcons = {
   book: "📚",
@@ -208,20 +186,62 @@ const resourceTypeLabels = {
   other: "Other"
 };
 
+// Templates
+const studyTemplates = {
+  exam: {
+    resources: [["Boards Book", 800, "book"], ["QBank Full", 2400, "qbank"]],
+    intervals: [1,1],
+    types: ["book","qbank"],
+    weekdays: [0,1,2,3,4,5,6], // All days
+    startDays: 0,
+    reviewDay: 7
+  },
+  balanced: {
+    resources: [["Textbook", 500, "book"], ["Flash Deck", 150, "flashcards"], ["Review Videos", 40, "video"]],
+    intervals: [2,2,3],
+    types: ["book","flashcards","video"],
+    weekdays: [1,2,3,4,5], // Mon-Fri
+    startDays: 0,
+    reviewDay: 7
+  },
+  weekend: {
+    resources: [["MCQ Practice", 300, "qbank"], ["Weekly Review", 36, "video"]],
+    intervals: [7,7],
+    types: ["qbank","video"],
+    weekdays: [6,0], // Sat/Sun
+    startDays: 0,
+    reviewDay: 0
+  }
+};
+
+// Local save/load
+function saveProgress(progress, notes, manualOrder) {
+  localStorage.setItem('studyProgress', JSON.stringify(progress));
+  localStorage.setItem('studyNotes', JSON.stringify(notes));
+  localStorage.setItem('studyManualOrder', JSON.stringify(manualOrder));
+}
+function loadProgress() { return JSON.parse(localStorage.getItem('studyProgress') || '{}'); }
+function loadNotes() { return JSON.parse(localStorage.getItem('studyNotes') || '{}'); }
+function loadManualOrder() { return JSON.parse(localStorage.getItem('studyManualOrder') || '{}'); }
+
 let lastPlanConfig = null, lastBoxCount = { total: 0, done: 0 }, lastScheduleDays = [],
     lastProgressCache = {}, lastNotesCache = {}, lastOrderCache = {};
 
 document.getElementById('add-resource-btn').addEventListener('click', function() {
+  addResourceRow();
+});
+function addResourceRow(resourceVal="", pagesVal="", typeVal="book", intervalVal="1") {
   const resourceList = document.getElementById('resource-list');
   const newRow = resourceList.firstElementChild.cloneNode(true);
-  newRow.querySelectorAll('input').forEach(input => input.value = '');
-  newRow.querySelector('.interval-dropdown').selectedIndex = 0;
-  newRow.querySelector('.resource-type-dropdown').selectedIndex = 0;
+  newRow.querySelector('.resource').value = resourceVal || "";
+  newRow.querySelector('.pages').value = pagesVal || "";
+  newRow.querySelector('.resource-type-dropdown').value = typeVal;
+  newRow.querySelector('.interval-dropdown').value = intervalVal;
   const removeBtn = newRow.querySelector('.remove-btn');
   removeBtn.style.display = 'inline';
   removeBtn.addEventListener('click', function() { newRow.remove(); });
   resourceList.appendChild(newRow);
-});
+}
 document.querySelectorAll('.remove-btn').forEach(btn => btn.addEventListener('click', function(e){
   if(document.querySelectorAll('.resource-row').length > 1) {
     e.target.closest('.resource-row').remove();
@@ -256,16 +276,7 @@ document.getElementById('bulk-confirm-btn').onclick = function() {
   const bulkPages = parseInt(document.getElementById('bulk-pages-input').value, 10) || 1;
   if (!lines.length) { alert("Paste at least one resource"); return; }
   lines.forEach(name=>{
-    const resourceList = document.getElementById('resource-list');
-    const newRow = resourceList.firstElementChild.cloneNode(true);
-    newRow.querySelector('.resource').value = name;
-    newRow.querySelector('.pages').value = bulkPages;
-    newRow.querySelector('.resource-type-dropdown').value = bulkType;
-    newRow.querySelector('.interval-dropdown').selectedIndex = 0;
-    const removeBtn = newRow.querySelector('.remove-btn');
-    removeBtn.style.display = 'inline';
-    removeBtn.addEventListener('click', function() { newRow.remove(); });
-    resourceList.appendChild(newRow);
+    addResourceRow(name, bulkPages, bulkType, "1");
   });
   document.getElementById('bulk-modal').style.display = 'none';
 };
@@ -290,12 +301,9 @@ function updateProgressBar() {
 }
 function getSelectedWeekdays() { return Array.from(document.querySelectorAll('.weekday')).filter(cb => cb.checked).map(cb => parseInt(cb.value)); }
 function getSkipDates() { return Array.from(document.querySelectorAll('.holiday-date')).map(input => input.value).filter(val => val); }
-
 function getRestDays(startDate, endDate, reviewDayInterval) {
-  // Generate periodic review/rest days if required
   let restDays = getSkipDates();
   if (reviewDayInterval >= 2) {
-    // E.g., every 7th day, add a rest/review marker
     let dt = new Date(startDate), i=0;
     while (dt <= endDate) {
       i++;
@@ -307,7 +315,6 @@ function getRestDays(startDate, endDate, reviewDayInterval) {
   }
   return Array.from(new Set(restDays));
 }
-
 function getScheduleDays(startDate, endDate, weekDays, skipDatesArr) {
   const days = []; let dt = new Date(startDate);
   while (dt <= endDate) { const dStr = dt.toISOString().slice(0,10);
@@ -432,6 +439,42 @@ function downloadCSV(planConfig, progress, notes, manualOrder, resourceTypes) {
   setTimeout(()=>{document.body.removeChild(link);window.URL.revokeObjectURL(url);},100);
 }
 
+// PDF export (print)
+document.getElementById('download-pdf-btn').onclick = function() {
+  window.print();
+};
+// Local backup and restore
+document.getElementById('backup-btn').onclick = function() {
+  if (!lastPlanConfig) { alert('No plan to export!'); return; }
+  let json = JSON.stringify({
+    planConfig: lastPlanConfig,
+    progress: lastProgressCache,
+    notes: lastNotesCache,
+    manualOrder: lastOrderCache
+  });
+  let blob=new Blob([json],{type:"application/json"});
+  let url=window.URL.createObjectURL(blob);
+  let link=document.createElement("a");
+  link.href=url;link.download="study_plan_backup.json";
+  document.body.appendChild(link);link.click();
+  setTimeout(()=>{document.body.removeChild(link);window.URL.revokeObjectURL(url);},100);
+};
+document.getElementById('restore-btn').onclick = function() {
+  document.getElementById('restore-file').click();
+};
+document.getElementById('restore-file').onchange = function(evt) {
+  let file = evt.target.files[0];
+  let reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      let obj = JSON.parse(e.target.result);
+      showLoadedSchedule(obj);
+      alert('Backup restored!');
+    } catch { alert('Could not parse backup.'); }
+  };
+  if(file)reader.readAsText(file);
+};
+
 document.getElementById('download-csv-btn').addEventListener('click',function(){
   let resourceTypes = Array.from(document.querySelectorAll('.resource-type-dropdown')).map(e=>e.value);
   downloadCSV(lastPlanConfig,lastProgressCache,lastNotesCache,lastOrderCache,resourceTypes);
@@ -446,7 +489,22 @@ document.getElementById('rebalance-btn').addEventListener('click',function(){
   renderSchedule(lastPlanConfig,progress,true);
 });
 
-// form: add review days
+// Templates support
+function applyTemplate(which) {
+  // Clear resources UI
+  document.getElementById('resource-list').innerHTML = '';
+  const tpl = studyTemplates[which];
+  if (!tpl) return;
+  tpl.resources.forEach((res) => {
+    addResourceRow(res[0], res[1], res[2], tpl.intervals[ tpl.resources.indexOf(res)] );
+  });
+  // Set weekday checkboxes
+  document.querySelectorAll('.weekday').forEach(cb=>{
+    cb.checked = tpl.weekdays.includes(parseInt(cb.value));
+  });
+  document.getElementById('review-dropdown').value = tpl.reviewDay;
+}
+
 document.getElementById('study-form').addEventListener('submit',function(event){
   event.preventDefault();
   const resourceNames = Array.from(document.querySelectorAll('.resource')).map(input=>input.value);
@@ -460,12 +518,19 @@ document.getElementById('study-form').addEventListener('submit',function(event){
   const skipDatesArr = getRestDays(startDate, endDate, reviewDayInterval); // get holidays + periodic review days
   const scheduleDays = getScheduleDays(startDate, endDate, weekDays, skipDatesArr);
   const planId = `${startDate.toISOString().slice(0,10)}_${endDate.toISOString().slice(0,10)}_${resourceNames.join('_')}_${weekDays.join('-')}_${skipDatesArr.join('-')}_${intervals.join('-')}`;
-  lastPlanConfig = {resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays};
+  lastPlanConfig = {resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes};
   lastScheduleDays = scheduleDays;
-  lastPlanConfig.resourceTypes = resourceTypes;
   const progress = loadProgress()[planId]||{};
   renderSchedule(lastPlanConfig,progress,false,resourceTypes,skipDatesArr);
 });
+
+function showLoadedSchedule(result) {
+  lastPlanConfig = result.planConfig;
+  lastProgressCache = result.progress || {};
+  lastNotesCache = result.notes || {};
+  lastOrderCache = result.manualOrder || {};
+  renderSchedule(lastPlanConfig, lastProgressCache, false);
+}
 
 function renderSchedule(planConfig, progress, rebalance = false, resourceTypesArg=null, skipDatesArr=null) {
   const { resourceNames, pageCounts, intervals, startDate, endDate, planId, scheduleDays, resourceTypes } = planConfig;
@@ -479,6 +544,7 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
   let skipArr = skipDatesArr || getSkipDates();
   let daysIdxArrList = resourceNames.map((r, idx)=>{let arr=[];for(let i=0;i<numDays;i+=intervals[idx])arr.push(i);return arr;});
   let tasksArr = [];
+  let workloadPerDay = Array(numDays).fill(0);
   // Mark review/rest days in UI
   let reviewRestMap = {};
   skipArr.forEach(dateStr => reviewRestMap[dateStr]=true);
@@ -508,6 +574,7 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
         let arrPos=arr.indexOf(i);
         let startPage=rebalance?pagesDone[idx]+arrPos*pagesPerDay+1:arrPos*pagesPerDay+1;
         let endPage=Math.min(rebalance?pagesDone[idx]+(arrPos+1)*pagesPerDay:(arrPos+1)*pagesPerDay,pageCounts[idx]);
+        workloadPerDay[i] += pagesPerDay;
         let resourceType = types[idx] || "other";
         let intervalText="Every day";
         if(intervals[idx]===2)intervalText="Every other day";
@@ -553,11 +620,28 @@ function renderSchedule(planConfig, progress, rebalance = false, resourceTypesAr
   document.getElementById('rebalance-btn').style.display='inline';
   document.getElementById('download-csv-btn').style.display='inline';
   document.getElementById('download-ics-btn').style.display='inline';
+  document.getElementById('download-pdf-btn').style.display='inline';
+  document.getElementById('backup-btn').style.display='inline';
+  document.getElementById('load-graph-container').style.display='block';
   lastBoxCount={total:totalBoxCount,done:doneBoxCount};
   updateProgressBar();
   lastProgressCache=progress;
   lastNotesCache=notes;
   lastOrderCache=manualOrder;
+
+  // Load graph
+  let graphBar = document.getElementById('load-graph-bar');
+  graphBar.innerHTML = "";
+  let max = Math.max(...workloadPerDay, 1);
+  workloadPerDay.forEach((val, idx) => {
+    let height = Math.round((val/max)*60)+5;
+    let day = scheduleDays[idx].toLocaleDateString();
+    graphBar.innerHTML += `<div title="${day}: ${val} items" style="height:${height}px"></div>`;
+  });
+  document.getElementById('load-graph-legend').innerText =
+    `Each vertical bar = workload (# pages/items), day-by-day.`;
+
+  // Drag and per-day controls
   let draggedIdx=null,dragOverIdx=null;
   const list=document.getElementById("draggable-list");
   const items=list?Array.from(list.querySelectorAll('.draggable-item')):[];
