@@ -267,6 +267,7 @@ function addResourceRow(resourceVal = "", typeVal = "video", totalVal = "", rate
 setupResourceAutofill(document.querySelector('.resource-row'));
 document.getElementById('add-resource-btn').addEventListener('click', function () { addResourceRow(); });
 
+// Updated schedule builder logic:
 document.getElementById('study-form').addEventListener('submit', function (e) {
   e.preventDefault();
   const startDate = document.getElementById('start-date').value;
@@ -296,18 +297,19 @@ document.getElementById('study-form').addEventListener('submit', function (e) {
     days.push(new Date(dt));
   }
   let schedule = [];
-  plan.forEach(resource => {
-    let index = 0;
-    let left = resource.total;
-    for (let d = 0; d < days.length; d += resource.interval) {
-      let day = new Date(days[d]);
-      let assign;
-      if (resource.noTotal) {
-        assign = hoursPerDay * resource.rate; // Rate per hour × hours per day (purely by daily workload)
-      } else {
-        assign = Math.min(resource.rate, left);
-        left -= assign;
-      }
+  for (let d = 0; d < days.length; d++) {
+    let day = new Date(days[d]);
+    // Find resources assigned for this interval
+    let todays = plan.filter(resource => (d % resource.interval) === 0 && (resource.noTotal || resource.total > 0));
+    // Total rate per hour today
+    let totalRate = todays.reduce((sum, r) => sum + r.rate, 0);
+    // Distribute hours proportionally
+    todays.forEach(resource => {
+      let timeFraction = resource.rate / totalRate;
+      let hoursAlloc = hoursPerDay * timeFraction;
+      let assign = resource.noTotal
+        ? Math.round(hoursAlloc * resource.rate)
+        : Math.min(Math.round(hoursAlloc * resource.rate), resource.total || Infinity);
       schedule.push({
         resource: resource.name,
         type: resource.type,
@@ -316,11 +318,15 @@ document.getElementById('study-form').addEventListener('submit', function (e) {
         priority: resource.priority,
         date: day.toISOString().slice(0,10),
         assign,
-        index: ++index
+        index: 1
       });
-      if (!resource.noTotal && left <= 0) break;
-    }
-  });
+      // Deduct from total if not unlimited
+      if (!resource.noTotal && resource.total) {
+        resource.total -= assign;
+        if (resource.total < 0) resource.total = 0;
+      }
+    });
+  }
   window._schedule = schedule;
   renderSchedule(schedule);
   showToast('Schedule created!', "#26994a");
