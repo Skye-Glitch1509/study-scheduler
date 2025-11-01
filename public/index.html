@@ -47,7 +47,6 @@
         <label>Resource:
           <input type="text" class="resource-search" list="resource-library" autocomplete="off" required style="min-width:160px;">
           <datalist id="resource-library">
-            <!-- Add/extend resources easily -->
             <option value="Marrow Video - Anatomy">
             <option value="Marrow Video - Physiology">
             <option value="Marrow Video - Biochemistry">
@@ -142,6 +141,7 @@
       <button type="button" id="reset-btn">Reset</button>
       <button type="button" id="backup-btn">Backup</button>
       <button type="button" id="restore-btn">Restore</button>
+      <button type="button" id="export-gcal-btn">Export to Google Calendar</button>
       <input type="file" id="restore-file" style="display:none;">
     </div>
   </form>
@@ -331,7 +331,6 @@ function renderSchedule(schedule) {
     html += "</div>";
   });
   list.innerHTML = html;
-  // Progress
   Array.from(list.querySelectorAll('.progress-check')).forEach(chk => {
     chk.addEventListener('change', function(){
       chk.parentElement.style.opacity = chk.checked ? ".45" : "1";
@@ -347,14 +346,12 @@ function showToast(msg, color = "#2562cf") {
   setTimeout(() => toast.classList.remove("show"), 2100);
 }
 
-// Reset
 document.getElementById('reset-btn').onclick = function(){
   window._schedule = [];
   document.getElementById('schedule-list').innerHTML = "";
   showToast('Form/schedule cleared!',"#2562cf");
 }
 
-// Backup/restore
 document.getElementById('backup-btn').onclick = function(){
   let json = JSON.stringify(window._schedule || [], null, 2);
   let blob = new Blob([json], {type:"application/json"});
@@ -383,6 +380,39 @@ document.getElementById('restore-file').onchange = function(evt){
     }
   };
   reader.readAsText(file);
+};
+
+// Google Calendar export (.ics)
+document.getElementById('export-gcal-btn').onclick = function() {
+  const schedule = window._schedule || [];
+  if (!schedule.length) return showToast("No schedule to export!", "#bc2d2d");
+  let ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:FMGE-NEETPG-SCHEDULER"
+  ];
+  schedule.forEach((task, i) => {
+    let dtstamp = new Date().toISOString().replace(/[-:]/g,"").split(".")[0] + "Z";
+    let dtstart = task.date.replace(/-/g,"") + "T090000";
+    let uid = "fmgeschdlr-" + task.date + "-" + i;
+    let title = `${task.resource} [${task.assign} items]`;
+    let desc = `Type: ${task.type}\nPriority: ${task.priority}\nTag: ${task.tag}\nNote: ${task.note}`;
+    ics.push("BEGIN:VEVENT");
+    ics.push("UID:" + uid);
+    ics.push("DTSTAMP:" + dtstamp);
+    ics.push("DTSTART;TZID=Asia/Kolkata:" + dtstart);
+    ics.push("SUMMARY:" + title);
+    ics.push("DESCRIPTION:" + desc);
+    ics.push("END:VEVENT");
+  });
+  ics.push("END:VCALENDAR");
+  let blob = new Blob([ics.join("\r\n")], {type:"text/calendar"});
+  let url = window.URL.createObjectURL(blob);
+  let a = document.createElement("a");
+  a.href = url; a.download = "study_schedule.ics";
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); },100);
+  showToast("Calendar file exported!");
 };
 
 </script>
