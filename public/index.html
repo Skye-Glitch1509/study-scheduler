@@ -4,6 +4,8 @@
   <title>FMGE/NEET PG Study Scheduler</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css?family=Inter:400,500,700&display=swap" rel="stylesheet">
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     body { font-family: 'Inter', Arial, sans-serif; background: #f7fafc; color:#232c40; margin:0; }
     .container { max-width:740px; margin:30px auto 36px; background:#fff; border-radius:18px; box-shadow:0 2px 12px #23262f15; padding:24px 28px;}
@@ -143,14 +145,13 @@
       <button type="button" id="backup-btn">Backup</button>
       <button type="button" id="restore-btn">Restore</button>
       <button type="button" id="export-gcal-btn">Export to Google Calendar</button>
+      <button type="button" id="gcal-direct-btn">Add directly to Google Calendar</button>
       <input type="file" id="restore-file" style="display:none;">
     </div>
   </form>
   <div class="schedule-list" id="schedule-list"></div>
 </div>
 <script>
-// resourceLibrary as before...
-
 const resourceLibrary = {
   "Marrow Video - Anatomy": { type: "video", total: 84 },
   "Marrow Video - Physiology": { type: "video", total: null },
@@ -365,7 +366,6 @@ function showToast(msg, color = "#2562cf") {
   setTimeout(() => toast.classList.remove("show"), 2100);
 }
 
-// Reset, backup, restore logic unchanged
 document.getElementById('reset-btn').onclick = function(){
   window._schedule = [];
   document.getElementById('schedule-list').innerHTML = "";
@@ -402,7 +402,6 @@ document.getElementById('restore-file').onchange = function(evt){
   reader.readAsText(file);
 };
 
-// Google Calendar export (.ics) logic unchanged
 document.getElementById('export-gcal-btn').onclick = function() {
   const schedule = window._schedule || [];
   if (!schedule.length) return showToast("No schedule to export!", "#bc2d2d");
@@ -436,6 +435,63 @@ document.getElementById('export-gcal-btn').onclick = function() {
   setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); },100);
   showToast("Calendar file exported!");
 };
+
+// GOOGLE CALENDAR API DIRECT INTEGRATION
+const CLIENT_ID = "429008753359-8poumjqj6qeoqftffvpdir1t3t01jdhs.apps.googleusercontent.com";
+const API_KEY = "AIzaSyCPzDOyBCs5eus_ZTjJJxJGgGNT-IrBLcI";
+const SCOPES = "https://www.googleapis.com/auth/calendar.events";
+let gapiLoaded = false, tokenClient, gcalInit = false;
+
+function gcalLoad() {
+  return new Promise(res => {
+    if (gapiLoaded) { res(); return; }
+    gapi.load("client", () => {
+      gapiLoaded = true;
+      gapi.client.init({ apiKey: API_KEY }).then(res);
+    });
+  });
+}
+
+document.getElementById('gcal-direct-btn').onclick = async function() {
+  if (!window._schedule || !window._schedule.length)
+    return showToast("No schedule to push to Calendar!", "#bc2d2d");
+
+  if (!gcalInit) {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: async (tokenResponse) => {
+        await gcalLoad();
+        await createCalendarEvents(window._schedule, tokenResponse.access_token);
+      }
+    });
+    gcalInit = true;
+  }
+  tokenClient.requestAccessToken();
+};
+
+async function createCalendarEvents(schedule, accessToken) {
+  for (let task of schedule) {
+    let endObj = new Date(task.date);
+    endObj.setDate(endObj.getDate() + 1);
+    let event = {
+      summary: `${task.resource} [${task.assign} items]`,
+      description: `Type: ${task.type}, Priority: ${task.priority}, Tag: ${task.tag}, Note: ${task.note || ""}`,
+      start: { date: task.date },
+      end: { date: endObj.toISOString().slice(0,10) }
+    };
+    try {
+      await gapi.client.calendar.events.insert({
+        calendarId: 'primary',
+        resource: event
+      });
+    } catch (err) {
+      showToast('Error creating event: ' + (err.message || err.result.error.message), '#bc2d2d');
+      return;
+    }
+  }
+  showToast('All events added to your Google Calendar!', "#26994a");
+}
 </script>
 </body>
 </html>
