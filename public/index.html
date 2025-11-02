@@ -207,7 +207,6 @@ function setupResourceAutofill(row) {
   const typeSel = row.querySelector('.resource-type-dropdown');
   const totalBox = row.querySelector('.pages');
   const noTotalChk = row.querySelector('.no-total-checkbox');
-  // resource autofill
   searchBox.addEventListener('change', function () {
     const val = searchBox.value.trim();
     if (resourceLibrary.hasOwnProperty(val)) {
@@ -239,7 +238,6 @@ function setupResourceAutofill(row) {
     totalBox.readOnly = false;
     totalBox.classList.remove("disabled-input");
   };
-  // noTotal checkbox effects
   function handleNoTotalChange() {
     if (noTotalChk.checked) {
       totalBox.value = '';
@@ -272,7 +270,6 @@ function addResourceRow(resourceVal = "", typeVal = "video", totalVal = "", rate
 setupResourceAutofill(document.querySelector('.resource-row'));
 document.getElementById('add-resource-btn').addEventListener('click', function () { addResourceRow(); });
 
-// PRIORITY-BASED SCHEDULER LOGIC WITH DAILY GOAL
 document.getElementById('study-form').addEventListener('submit', function (e) {
   e.preventDefault();
   const startDate = document.getElementById('start-date').value;
@@ -298,7 +295,6 @@ document.getElementById('study-form').addEventListener('submit', function (e) {
     if (!noTotal && !total) return;
     plan.push({ name, type, total, rate, dailyGoal, note, tag, priority, interval, noTotal, assigned: 0 });
   });
-  // Sort plan by priority: High > Medium > Low
   const prioOrder = { high: 1, medium: 2, low: 3 };
   plan.sort((a, b) => prioOrder[a.priority] - prioOrder[b.priority]);
   let days = [];
@@ -309,14 +305,12 @@ document.getElementById('study-form').addEventListener('submit', function (e) {
   for (let d = 0; d < days.length; d++) {
     let day = new Date(days[d]);
     let timeLeft = hoursPerDay;
-    // For each priority level, schedule as much as possible up to dailyGoal (by interval)
     for (let prio of ["high", "medium", "low"]) {
       let todays = plan.filter(resource =>
         resource.priority === prio &&
         (d % resource.interval) === 0 &&
         (resource.noTotal || resource.total > resource.assigned)
       );
-      // For each resource, assign up to its dailyGoal
       for (let resource of todays) {
         if (timeLeft <= 0) break;
         let possibleByRate = timeLeft * resource.rate;
@@ -339,7 +333,7 @@ document.getElementById('study-form').addEventListener('submit', function (e) {
           if (!resource.noTotal) resource.assigned += possible;
         }
       }
-      if (timeLeft <= 0) break; // once out of time, stop for the day
+      if (timeLeft <= 0) break;
     }
   }
   window._schedule = schedule;
@@ -434,7 +428,7 @@ document.getElementById('export-gcal-btn').onclick = function() {
   schedule.forEach((task, i) => {
     let dtstart = task.date.replace(/-/g, "");
     let dtendObj = new Date(task.date);
-    dtendObj.setDate(dtendObj.getDate() + 1);
+    dtendObj.setDate(dtendObj.getDate() + 1); // all-day events: DTEND is exclusive
     let dtend = dtendObj.toISOString().slice(0,10).replace(/-/g, "");
     let uid = `fmgeschdlr-${task.date}-${i}`;
     let title = `${task.resource} [${task.assign} items]`;
@@ -457,7 +451,16 @@ document.getElementById('export-gcal-btn').onclick = function() {
   showToast("Calendar file exported!");
 };
 
-// GOOGLE CALENDAR API DIRECT INTEGRATION
+// ...the rest of your code (Google calendar API direct push) unchanged...
+</script>
+</body>
+</html>
+<!-- ...the full code from before, then add at the end: -->
+
+<script>
+/* ...all your scheduler/export logic ... */
+
+// GOOGLE CALENDAR API DIRECT INTEGRATION (creates all-day events)
 const CLIENT_ID = "429008753359-3pjq17kht3ck8bvaob9valcmcb4oorfg.apps.googleusercontent.com";
 const API_KEY = "AIzaSyCPzDOyBCs5eus_ZTjJJxJGgGNT-IrBLcI";
 const SCOPES = "https://www.googleapis.com/auth/calendar.events";
@@ -498,7 +501,7 @@ async function createCalendarEvents(schedule, accessToken) {
     let event = {
       summary: `${task.resource} [${task.assign} items]`,
       description: `Type: ${task.type}, Priority: ${task.priority}, Tag: ${task.tag}, Note: ${task.note || ""}`,
-      start: { date: task.date },
+      start: { date: task.date },          // all-day event format
       end: { date: endObj.toISOString().slice(0,10) }
     };
     try {
