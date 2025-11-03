@@ -153,6 +153,11 @@
       <input type="file" id="restore-file" style="display:none;">
     </div>
   </form>
+  <div style="margin-top:18px;text-align:center;font-size:.97em;">
+    <a href="https://study-schedulerr.vercel.app/privacy" target="_blank" rel="noopener" style="color:#2562cf;font-weight:500;">
+      Privacy Policy
+    </a>
+  </div>
   <div class="schedule-list" id="schedule-list"></div>
 </div>
 <script>
@@ -428,7 +433,7 @@ document.getElementById('export-gcal-btn').onclick = function() {
   schedule.forEach((task, i) => {
     let dtstart = task.date.replace(/-/g, "");
     let dtendObj = new Date(task.date);
-    dtendObj.setDate(dtendObj.getDate() + 1); // all-day events: DTEND is exclusive
+    dtendObj.setDate(dtendObj.getDate() + 1);
     let dtend = dtendObj.toISOString().slice(0,10).replace(/-/g, "");
     let uid = `fmgeschdlr-${task.date}-${i}`;
     let title = `${task.resource} [${task.assign} items]`;
@@ -451,16 +456,7 @@ document.getElementById('export-gcal-btn').onclick = function() {
   showToast("Calendar file exported!");
 };
 
-// ...the rest of your code (Google calendar API direct push) unchanged...
-</script>
-</body>
-</html>
-<!-- ...the full code from before, then add at the end: -->
-
-<script>
-/* ...all your scheduler/export logic ... */
-
-// GOOGLE CALENDAR API DIRECT INTEGRATION (creates all-day events)
+// GOOGLE CALENDAR API DIRECT INTEGRATION (ALL-DAY EVENTS)
 const CLIENT_ID = "429008753359-3pjq17kht3ck8bvaob9valcmcb4oorfg.apps.googleusercontent.com";
 const API_KEY = "AIzaSyCPzDOyBCs5eus_ZTjJJxJGgGNT-IrBLcI";
 const SCOPES = "https://www.googleapis.com/auth/calendar.events";
@@ -501,7 +497,7 @@ async function createCalendarEvents(schedule, accessToken) {
     let event = {
       summary: `${task.resource} [${task.assign} items]`,
       description: `Type: ${task.type}, Priority: ${task.priority}, Tag: ${task.tag}, Note: ${task.note || ""}`,
-      start: { date: task.date },          // all-day event format
+      start: { date: task.date },
       end: { date: endObj.toISOString().slice(0,10) }
     };
     try {
